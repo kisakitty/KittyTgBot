@@ -1,0 +1,71 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Content Include="..\.dockerignore">
+            <Link>.dockerignore</Link>
+        </Content>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.6"/>
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.6">
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+        <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0"/>
+        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.4"/>
+        <PackageReference Include="OpenAI-DotNet" Version="8.1.1"/>
+        <PackageReference Include="OxyPlot.Core" Version="2.1.2"/>
+        <PackageReference Include="OxyPlot.Core.Drawing" Version="2.1.0"/>
+        <PackageReference Include="Serilog" Version="3.1.0-dev-02086"/>
+        <PackageReference Include="Serilog.Sinks.Console" Version="5.0.0-dev-00923"/>
+        <PackageReference Include="Serilog.Sinks.File" Version="5.0.1-dev-00968"/>
+        <PackageReference Include="Sgbj.Cron.CronTimer" Version="1.0.2"/>
+        <PackageReference Include="System.Net.Http.Json" Version="8.0.0"/>
+        <PackageReference Include="Telegram.Bot" Version="21.0.0"/>
+    </ItemGroup>
+
+
+    <ItemGroup>
+        <EmbeddedResource Update="Resources\LanguageResources.resx">
+            <Generator>ResXFileCodeGenerator</Generator>
+            <LastGenOutput>LanguageResources.Designer.cs</LastGenOutput>
+        </EmbeddedResource>
+        <EmbeddedResource Update="Resources\LanguageResources.ru.resx">
+            <Generator>ResXFileCodeGenerator</Generator>
+            <LastGenOutput>LanguageResources.ru.Designer.cs</LastGenOutput>
+        </EmbeddedResource>
+        <EmbeddedResource Update="Resources\test.resx">
+            <Generator>ResXFileCodeGenerator</Generator>
+            <LastGenOutput>test.Designer.cs</LastGenOutput>
+        </EmbeddedResource>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Compile Update="Resources\LanguageResources.Designer.cs">
+            <DesignTime>True</DesignTime>
+            <AutoGen>True</AutoGen>
+            <DependentUpon>LanguageResources.resx</DependentUpon>
+        </Compile>
+        <Compile Update="Resources\LanguageResources.ru.Designer.cs">
+            <DesignTime>True</DesignTime>
+            <AutoGen>True</AutoGen>
+            <DependentUpon>LanguageResources.ru.resx</DependentUpon>
+        </Compile>
+        <Compile Update="Resources\test.Designer.cs">
+            <DesignTime>True</DesignTime>
+            <AutoGen>True</AutoGen>
+            <DependentUpon>test.resx</DependentUpon>
+        </Compile>
+    </ItemGroup>
+
+
+</Project>

@@ -1,0 +1,18 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KittyBot", "KittyBot\KittyBot.csproj", "{5A9B6186-06AC-4956-A98A-099A865ED501}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{08C4D88F-EFD5-4FDB-A0F1-7490470C7230}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5A9B6186-06AC-4956-A98A-099A865ED501}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5A9B6186-06AC-4956-A98A-099A865ED501}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5A9B6186-06AC-4956-A98A-099A865ED501}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5A9B6186-06AC-4956-A98A-099A865ED501}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
