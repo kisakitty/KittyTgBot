@@ -39,6 +39,9 @@ public class CommandFactory
             case "/setbirthday": return scope.ServiceProvider.GetRequiredService<SetBirthdayCommand>();
             case "/removebirthday": return scope.ServiceProvider.GetRequiredService<RemoveBirthday>();
             case "/getbirthdays": return scope.ServiceProvider.GetRequiredService<GetBirthdaysCommand>();
+            case "/hellomsg": return scope.ServiceProvider.GetRequiredService<ReverseHelloMessageConfigCommand>();
+            case "/chatbot": return scope.ServiceProvider.GetRequiredService<ReverseChatBotCommand>();
+            case "/clearcontext": return scope.ServiceProvider.GetRequiredService<ClearContextCommand>();
         }
         return _userCommands.GetValueOrDefault(commandName, _defaultCommand);
     }

@@ -27,9 +27,9 @@ public class BirthdaysService
     public List<Birthday> GetBirthdaysThisMonth(long chatId)
     {
         var requestedChats = chatId < 0
-            ? [chatId]
-            : (from s in _db.Stats where s.User.UserId == chatId select s.ChatId).ToList();
-        var usersWhiteList = from s in _db.Stats where requestedChats.Contains(s.ChatId) select s.User;
+            ? [chatId] // chatId is a group id
+            : (from s in _db.Stats where s.User.UserId == chatId && s.IsActive select s.ChatId).ToList(); // chatId is a user id
+        var usersWhiteList = from s in _db.Stats where requestedChats.Contains(s.ChatId) && s.IsActive select s.User;
         var now = DateTime.SpecifyKind(DateTime.Now, DateTimeKind.Utc);
         var todayBirthdays = (from birthday in _db.Birthdays
             where birthday.Month == now.Month & (usersWhiteList == null || usersWhiteList.Contains(birthday.User))

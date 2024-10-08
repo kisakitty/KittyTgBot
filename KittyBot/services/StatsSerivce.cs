@@ -23,11 +23,40 @@ public class StatsSerivce
         {
             var user = GetOrCreateDbUser(tgUser);
 
-            _db.Stats.Add(new Stats { ChatId = chatId, User = user, CountMessages = 1 });
+            _db.Stats.Add(new Stats { ChatId = chatId, User = user, CountMessages = 1, IsActive = true });
         }
         else
         {
             stats.CountMessages += 1;
+        }
+
+        _db.SaveChanges();
+    }
+
+    public void ActivateUser(Telegram.Bot.Types.User tgUser, long chatId)
+    {
+        SetUserStatus(tgUser, chatId, true);
+    }
+
+    public void DeactivateUser(Telegram.Bot.Types.User tgUser, long chatId)
+    {
+        SetUserStatus(tgUser, chatId, false);
+    }
+
+    private void SetUserStatus(Telegram.Bot.Types.User tgUser, long chatId, bool isActive)
+    {
+        var stats = (from s in _db.Stats 
+                where s.User.UserId == tgUser.Id && s.ChatId == chatId
+                select s)
+            .FirstOrDefault();
+        if (stats == null)
+        {
+            var user = GetOrCreateDbUser(tgUser);
+            _db.Stats.Add(new Stats { ChatId = chatId, User = user, CountMessages = 0, IsActive = isActive });
+        }
+        else
+        {
+            stats.IsActive = isActive;
         }
 
         _db.SaveChanges();
@@ -59,7 +88,7 @@ public class StatsSerivce
 
     public List<long> GetUserChats(long userId)
     {
-        var chats = from s in _db.Stats where s.User.Id == userId && s.ChatId < 0 select s.ChatId;
+        var chats = from s in _db.Stats where s.User.Id == userId && s.ChatId < 0 && s.IsActive select s.ChatId;
         return chats.ToList();
     }
 }

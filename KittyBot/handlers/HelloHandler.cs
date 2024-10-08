@@ -1,51 +1,46 @@
-using System.Net;
-using System.Net.Http.Json;
-using System.Text.Json;
 using KittyBot.database;
 using KittyBot.dto.gemini;
 using KittyBot.exceptions;
+using KittyBot.services;
 using Serilog;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 
 namespace KittyBot.handlers;
 
-public class HelloHandler: Handler
+public class HelloHandler(long? botId) : Handler
 {
-    private readonly GeminiConfig _generationConfig = new (0.9f, 2000);
-    
-    private readonly List<GeminiSafetyParameter> _safetyParameter = new()
-    {
-        new GeminiSafetyParameter("HARM_CATEGORY_HARASSMENT", "BLOCK_NONE"),
-        new GeminiSafetyParameter("HARM_CATEGORY_HATE_SPEECH", "BLOCK_NONE"),
-        new GeminiSafetyParameter("HARM_CATEGORY_SEXUALLY_EXPLICIT", "BLOCK_NONE"),
-        new GeminiSafetyParameter("HARM_CATEGORY_DANGEROUS_CONTENT", "BLOCK_NONE")
-    };
-    
-    private static readonly HttpClient BotClient = new()
-    {
-        BaseAddress = new Uri("https://generativelanguage.googleapis.com"),
-        Timeout = new TimeSpan(0, 1, 0)
-    };
-    
+    private readonly GeminiBot _geminiBot = new();
+
     public override async Task HandleUpdate(ITelegramBotClient client, Update update, CancellationToken cancelToken, Locale language = Locale.RU)
     {
-        if (update.Message?.From is null) return;
-        var response = await GetResponse(Util.FormatUserName(update.Message.From, true), "gemini-pro", cancelToken);
-        await client.SendTextMessageAsync(
-            chatId: update.Message.Chat.Id,
-            text: response,
-            cancellationToken: cancelToken,
-            linkPreviewOptions: new LinkPreviewOptions { IsDisabled = true },
-            replyParameters: new ReplyParameters { ChatId = update.Message.Chat.Id }
-        );
+        if (update.Message?.NewChatMembers is null) return;
+        foreach (var newMember in update.Message.NewChatMembers)
+        {
+            var chat = await client.GetChatAsync(update.Message!.Chat.Id, cancelToken);
+            var userName = Util.FormatUserName(newMember, true);
+            var fullName = Util.FormatNames(newMember);
+            var chatTitle = update.Message?.Chat.Title;
+            var response = botId != newMember.Id ?
+                await GetResponse(userName, fullName, chatTitle, chat.Description, cancelToken) : 
+                await GenerateBotIntroduction(userName, fullName, chatTitle, chat.Description, cancelToken);
+            if (response == null)
+            {
+                continue;
+            }
+            await client.SendTextMessageAsync(
+                chatId: update.Message!.Chat.Id,
+                text: response,
+                cancellationToken: cancelToken,
+                linkPreviewOptions: new LinkPreviewOptions { IsDisabled = true }
+            );
+            Thread.Sleep(500);
+        }
     }
-    
-    private async Task<string?> GetResponse(string? user, string model, CancellationToken cancelToken)
+
+    private async Task<string?> GetResponse(string? userName, string? fullName, string? chatTitle,
+        string? chatDescription, CancellationToken cancelToken)
     {
-        string? jsonContent = null;
-        var _apikey = Environment.GetEnvironmentVariable(GeminiHandler.GeminiApiKeyEnv) ??
-                      throw new EnvVariablesException($"Expect Gemini API key. Set it to environment variable {GeminiHandler.GeminiApiKeyEnv}");
         try
         {
             var contents = new List<GeminiMessage>
@@ -53,47 +48,70 @@ public class HelloHandler: Handler
                 new(new List<GeminiContent>
                     {
                         new(
-                            "Ты бот в небольшом чате, основная твоя задача — приветствовать новых пользователей. Придерживайся неформального и молодёжного стиля, будь максимально оригинальным и непредсказуемым, шути, пугай и т. д.. Я напишу тебе лишь никнейм пользователя. Не пиши ничего кроме приветствия! Расскажи что ты умеешь поздравлять с днём рождения (нужно вбить свой день рождения при помощи команды /setbirthday), отдавать фоточки котиков по команде /cat и что ты очень умный бот, придумай комплимент пользователю! Длина приветствия от 400 до 1000 символов. Не используй Markdown!",
+                            "Ты бот в небольшом чате, основная твоя задача — приветствовать новых пользователей. " +
+                            "Придерживайся неформального и молодёжного стиля, будь максимально оригинальным и непредсказуемым, шути, пугай и т. д. " +
+                            "Я напишу тебе лишь никнейм пользователя и его имя. Не пиши ничего кроме приветствия! " +
+                            "Расскажи что ты умеешь поздравлять с днём рождения (нужно вбить свой день рождения при помощи команды в формате /setbirthday DD-MM), " +
+                            "отдавать фоточки котиков по команде /cat и что ты очень умный бот, придумай комплимент пользователю! Также расскажи про навшу беседу, я дам тебе название с описанием!" +
+                            "Длина приветствия от 400 до 600 символов. НИ В КОЕМ СЛУЧАЕ НЕ ИСПОЛЬЗУЙ MARKDOWN!",
                             null
                         )
                     },
                     "user"),
                 new(new List<GeminiContent>
                     {
-                        new($"Пользователь: {user}",
+                        new($"Никнейм нового пользователя: {userName}. Имя нового пользователя: {fullName}. Беседа: {chatTitle ?? "без названия"}. Описание беседы: {chatDescription ?? "без описания"}",
                             null
                         )
                     },
                     "user"),
             };
-            var chatRequest = new GeminiRequest(contents, null, _generationConfig, _safetyParameter);
-            var httpResponse =
-                await BotClient.PostAsJsonAsync($"/v1beta/models/{model}:generateContent?key={_apikey}", chatRequest, cancellationToken: cancelToken);
-            if (httpResponse.StatusCode == HttpStatusCode.OK)
-            {
-                jsonContent = await httpResponse.Content.ReadAsStringAsync(cancelToken);
-                var response = JsonSerializer.Deserialize<GeminiResponse>(jsonContent);
-                var result = response?.candidates?[0].content.parts[0].text;
-                if (result is null)
-                {
-                    throw new GeminiException(jsonContent ?? "");
-                }
-                return result;
-            }
+            return await _geminiBot.GenerateTextResponse(contents, "gemini-pro", cancelToken);
         }
-        catch (TaskCanceledException)
+        catch (GeminiException ex)
         {
-        }
-        catch (Exception ex)
-        {
-            Log.Error(ex, "Exception");
-            if (jsonContent is not null)
-            {
-                Log.Error(jsonContent);
-            }
+            Log.Error(ex, "Gemini API error");
         }
 
         return null;
+    }
 
+    private async Task<string?> GenerateBotIntroduction(string? botName, string? botFullName, string? chatTitle,
+        string? chatDescription, CancellationToken cancelToken)
+    {
+        try
+        {
+            var contents = new List<GeminiMessage>
+            {
+                new(new List<GeminiContent>
+                    {
+                        new(
+                            "Ты бот в небольшом чате, основная твоя задача сейчас — представить себя перед другими пользователями! " +
+                            "Придерживайся неформального и молодёжного стиля, будь максимально оригинальным и непредсказуемым, шути, пугай и т. д. " +
+                            "Я напишу тебе твой никнейм и твоё имя. Не пиши ничего кроме своего описания! " +
+                            "Расскажи что ты умеешь поздравлять с днём рождения (нужно вбить свой день рождения при помощи команды в формате /setbirthday DD-MM), " +
+                            "отдавать фоточки котиков по команде /cat и что ты очень умный бот! Также расскажи почему ты рад присоединиться к беседе, я дам тебе название с описанием!" +
+                            "Длина приветствия от 400 до 1000 символов. Не используй Markdown!",
+                            null
+                        )
+                    },
+                    "user"),
+                new(new List<GeminiContent>
+                    {
+                        new($"Твой никнейм: {botName}. Твоё имя: {botFullName}. " +
+                            $"Беседа: {chatTitle ?? "без названия"}. Описание беседы: {chatDescription ?? "без описания"}",
+                            null
+                        )
+                    },
+                    "user"),
+            };
+            return await _geminiBot.GenerateTextResponse(contents, "gemini-pro", cancelToken);
+        }
+        catch (GeminiException ex)
+        {
+            Log.Error(ex, "Gemini API error");
+        }
+
+        return null;
     }
 }

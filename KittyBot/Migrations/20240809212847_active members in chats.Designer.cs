@@ -3,6 +3,7 @@ using System;
 using KittyBot.database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace KittyBot.Migrations
 {
     [DbContext(typeof(KittyBotContext))]
-    partial class KittyBotContextModelSnapshot : ModelSnapshot
+    [Migration("20240809212847_active members in chats")]
+    partial class activemembersinchats
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -144,28 +147,6 @@ namespace KittyBot.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("ModelsAnalytics");
-                });
-
-            modelBuilder.Entity("KittyBot.database.ResponseConfig", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("ChatBot")
-                        .HasColumnType("boolean");
-
-                    b.Property<long>("ChatId")
-                        .HasColumnType("bigint");
-
-                    b.Property<bool>("HelloMessage")
-                        .HasColumnType("boolean");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("ResponseConfigs");
                 });
 
             modelBuilder.Entity("KittyBot.database.Stats", b =>

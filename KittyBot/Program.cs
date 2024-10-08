@@ -35,6 +35,7 @@ public static class Program
             services.AddScoped<EventService>();
             services.AddScoped<MessageService>();
             services.AddScoped<StatsSerivce>();
+            services.AddScoped<ResponseConfigService>();
             services.AddScoped<AnalyticsService>();
             services.AddScoped<BirthdaysService>();
             services.AddScoped<LocaleService>();
@@ -42,12 +43,14 @@ public static class Program
             services.AddScoped<GetStatsCommand>();
             services.AddScoped<GetAnalyticsCommand>();
             services.AddScoped<GetBirthdaysCommand>();
+            services.AddScoped<ClearContextCommand>();
             services.AddScoped<SetBirthdayCommand>();
             services.AddScoped<ForceSetBirthdayCommand>();
             services.AddScoped<GetStatsPieCommand>();
             services.AddScoped<GetStatsChartCommand>();
+            services.AddScoped<ReverseHelloMessageConfigCommand>();
+            services.AddScoped<ReverseChatBotCommand>();
             services.AddScoped<ReactionHandler>();
-            services.AddScoped<HelloHandler>();
             services.AddScoped<RemoveBirthday>();
             SetTelegramClient(services);
             SetOpenAiClient(services);

@@ -33,6 +33,8 @@ public class KittyBotService : IHostedService
     private long? _myId;
 
     private string? _botname;
+    
+    private HelloHandler _helloHandler;
 
     public KittyBotService(IServiceScopeFactory scopeFactory, TelegramBotClient client)
     {
@@ -72,6 +74,7 @@ public class KittyBotService : IHostedService
             _botname = Task.Result.Username;
             Log.Information($"My bot ID: {_myId}");
             Log.Information($"My username: {_botname}");
+            _helloHandler = new HelloHandler(_myId);
         });
     }
 
@@ -87,7 +90,7 @@ public class KittyBotService : IHostedService
 
         _botClient.StartReceiving(
             updateHandler: HandleUpdateAsync,
-            pollingErrorHandler: HandlePollingErrorAsync,
+            errorHandler: HandlePollingErrorAsync,
             receiverOptions: receiverOptions,
             cancellationToken: cts.Token
         );
@@ -123,7 +126,6 @@ public class KittyBotService : IHostedService
     {
         using var scope = _scopeFactory.CreateScope();
         var userService = scope.ServiceProvider.GetRequiredService<UserService>();
-        var statsService = scope.ServiceProvider.GetRequiredService<StatsSerivce>();
         if (update.Message?.From is not null)
         {
             userService.CreateOrUpdateUser(update.Message.From.Id, update.Message.From.Username,
@@ -141,16 +143,12 @@ public class KittyBotService : IHostedService
             return;
         }
 
+        HandleUserStats(client, update, cancelToken);
+        
         if (message.From != null)
         {
+            var statsService = scope.ServiceProvider.GetRequiredService<StatsSerivce>();
             statsService.LogStats(message.From, message.Chat.Id);
-        }
-
-        if (message.Type == MessageType.ChatMembersAdded)
-        {
-            var helloHandler = new HelloHandler();
-            helloHandler.HandleUpdate(client, update, cancelToken);
-            return;
         }
 
         // Only process text messages
@@ -179,9 +177,36 @@ public class KittyBotService : IHostedService
                 $"Skipped chat: {message.Chat.Id} | Title: {message.Chat.Title}");
             return;
         }
+        var responseConfigService = scope.ServiceProvider.GetRequiredService<ResponseConfigService>();
+        var config = responseConfigService.GetResponseConfig(update.Message.Chat.Id);
+        if (config.ChatBot)
+        {
+            ChatAiResponse(client, update, messageText, message, cancelToken);
+        }
+    }
 
-        ChatAiResponse(client, update, messageText, message, cancelToken);
-        return;
+    private void HandleUserStats(ITelegramBotClient client, Update update, CancellationToken cancelToken)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var statsService = scope.ServiceProvider.GetRequiredService<StatsSerivce>();
+        var responseConfigService = scope.ServiceProvider.GetRequiredService<ResponseConfigService>();
+        if (update.Message!.Type == MessageType.NewChatMembers)
+        {
+            foreach (var newMember in update.Message.NewChatMembers ?? [])
+            {
+                statsService.ActivateUser(newMember, update.Message.Chat.Id);
+            }
+
+            var config = responseConfigService.GetResponseConfig(update.Message.Chat.Id);
+            if (config.HelloMessage)
+            {
+                _helloHandler.HandleUpdate(client, update, cancelToken);
+            }
+        }
+        if (update.Message!.Type == MessageType.LeftChatMember && update.Message.LeftChatMember != null)
+        {
+            statsService.DeactivateUser(update.Message.LeftChatMember, update.Message.Chat.Id);
+        }
     }
 
     private void ChatAiResponse(ITelegramBotClient client, Update update, string messageText,
@@ -238,7 +263,7 @@ public class KittyBotService : IHostedService
         var callbackFactory = scope.ServiceProvider.GetRequiredService<CallbackActionFactory>();
         var callbackAction = callbackFactory.GetCallbackActionByName(callback.Data);
         callbackAction?.Handle(callback);
-        client.MakeRequestAsync(new AnswerCallbackQueryRequest(callback.Id));
+        client.MakeRequestAsync(new AnswerCallbackQueryRequest { CallbackQueryId = callback.Id});
     }
 
     public Task StopAsync(CancellationToken cancellationToken)

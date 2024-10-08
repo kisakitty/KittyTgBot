@@ -32,7 +32,7 @@ public class GetBirthdaysCommand : Command
         }
 
         var sb = new StringBuilder();
-        sb.Append("Именинники/именинницы этого месяца\\!\n\n");
+        sb.Append(message.Chat.Id > 0 ? "Именинники/именинницы этого месяца \\(тех, кто с тобой хотя бы в одной беседе\\)\\!\n\n" : "Именинники/именинницы этого месяца этой беседы\\!\n\n");
         birthdays.ForEach(birthday =>
         {
             var localDateString = Util.LocalizeDate(new DateTime(2024, birthday.Month, birthday.Day), "ru-RU");

@@ -4,10 +4,10 @@ namespace KittyBot.database;
 
 public class KittyBotContext: DbContext
 {
-    private const string UsernameEnv = "YT_PS_USERNAME";
-    private const string PasswordEnv = "YT_PS_PASSWORD";
-    private const string HostnameEnv = "YT_PS_HOSTNAME";
-    private const string DatabaseEnv = "YT_PS_DATABASE";
+    private const string UsernameEnv = "KITTY_PS_USERNAME";
+    private const string PasswordEnv = "KITTY_PS_PASSWORD";
+    private const string HostnameEnv = "KITTY_PS_HOSTNAME";
+    private const string DatabaseEnv = "KITTY_PS_DATABASE";
     
     public KittyBotContext(DbContextOptions<KittyBotContext> options) : base(options) { }
 
@@ -55,4 +55,6 @@ public class KittyBotContext: DbContext
     public DbSet<ChatLanguage> ChatsLanguages { get; set; }
     
     public DbSet<ModelAnalytic> ModelsAnalytics { get; set; }
+
+    public DbSet<ResponseConfig> ResponseConfigs { get; set; }
 }

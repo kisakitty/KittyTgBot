@@ -53,6 +53,13 @@ public class MessageService
             .Select(message => new GeminiMessage(new List<GeminiContent> { new(message.Content, null) }, message.IsBot ? "model" : "user"))
             .ToList();
     }
+    
+    public void ClearChatMessages(long chatId)
+    {
+        var chatMessages = _db.Messages.Where(m => m.ChatId == chatId).ToList();
+        _db.Messages.RemoveRange(chatMessages);
+        _db.SaveChanges();
+    }
 
     public void LogMessage(HistoricalMessage newMessage)
     {

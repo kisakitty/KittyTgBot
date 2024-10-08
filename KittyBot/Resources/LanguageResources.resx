@@ -29,7 +29,10 @@
 `/setbirthday DD-MM` — set your birthday
 /removebirthday — remove your birthday
 /getbirthdays — get birthdays this month
-/analytics — get LLM statistics</value>
+/analytics — get LLM statistics
+/hellomsg — enable/disable hello message
+/chatbot — enable/disable chat bot answers
+/clearcontext — clear chat context</value>
     </data>
     <data name="Start" xml:space="preserve">
         <value>Hello! Send me /help, if you want to know how to use me :)</value>

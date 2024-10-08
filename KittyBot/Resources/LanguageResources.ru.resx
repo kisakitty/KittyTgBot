@@ -30,7 +30,10 @@
 `/setbirthday DD-MM` — добавить день рождения в бота
 /removebirthday — удалить день рождения
 /getbirthdays — увидеть дни рождения этого месяца
-/analytics — ститистика использований различных LLM</value>
+/analytics — ститистика использований различных LLM
+/hellomsg — отключить/включить приветственное сообщение
+/chatbot — отключить/включить чат бота
+/clearcontext — очистить контекст бота в чате</value>
     </data>
     <data name="Start" xml:space="preserve">
         <value>Привет! Для справки отправь мне команду /help :)</value>

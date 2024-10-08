@@ -30,8 +30,12 @@ public static class Util
         return FormatNames(user);
     }
 
-    public static string FormatUserName(Telegram.Bot.Types.User user, bool mention)
+    public static string FormatUserName(Telegram.Bot.Types.User? user, bool mention)
     {
+        if (user is null)
+        {
+            return "unknown";
+        }
         if (user.Username is not null && !mention)
         {
             return $"[{user.Username.Replace("_", "\\_")}](https://t.me/{user.Username})";
@@ -55,8 +59,12 @@ public static class Util
         return user.FirstName;
     }
 
-    public static string FormatNames(Telegram.Bot.Types.User user)
+    public static string FormatNames(Telegram.Bot.Types.User? user)
     {
+        if (user is null)
+        {
+            return "unknown";
+        }
         if (user.LastName is not null && user.LastName.Length > 0)
         {
             return $"{user.FirstName} {user.LastName}";
@@ -74,14 +82,14 @@ public static class Util
     public static string FormatMessage(Telegram.Bot.Types.Message tgMessage, long? myId)
     {
         var notMyMessage = myId == null || tgMessage.ReplyToMessage?.From?.Id != myId;
-        var mainText = tgMessage.Text ?? tgMessage.Caption;
+        var mainText = $"Никнейм: {FormatUserName(tgMessage.From, true)}; Имя: {FormatNames(tgMessage.From)}\nСообщение: [\n{tgMessage.Text ?? tgMessage.Caption}\n]";
         var replyText = tgMessage.ReplyToMessage?.Text ?? tgMessage.ReplyToMessage?.Caption;
         if (replyText != null && notMyMessage)
         {
-            return $"{mainText}\n\nПересланное сообщение:[\n{replyText}\n]";
+            return $"{mainText}\n\nПересланное сообщение от {FormatUserName(tgMessage.ReplyToMessage?.From, true)}: [\n{replyText}\n]";
         }
         
-        return mainText ?? "";
+        return mainText;
     }
 
     public static async Task<string?> GetPhotoBase64(ITelegramBotClient client, Telegram.Bot.Types.Message tgMessage, CancellationToken cancelToken)
