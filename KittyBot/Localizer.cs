@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Resources;
 using KittyBot.database;
 using KittyBot.Resources;
 

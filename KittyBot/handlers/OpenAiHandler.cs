@@ -56,7 +56,10 @@ public class OpenAiHandler: Handler
         long chatId = update.Message.Chat.Id;
         string answer = choice.Message.Content.ToString();
         LogHistoryMessages(formattedMessage, answer, update.Message.Chat.Id);
-        LogAnalytics(chatId, "gpt-3.5-turbo", "OpenAI API");
+        using var responseConfigServiceScope = _scopeFactory.CreateScope();
+        var responseConfigService = responseConfigServiceScope.ServiceProvider.GetRequiredService<ResponseConfigService>();
+        var mode = responseConfigService.GetChatMode(chatId);
+        LogAnalytics(chatId, "gpt-3.5-turbo", "OpenAI API", mode);
         await client.SendTextMessageAsync(
             chatId: chatId,
             text: answer,
@@ -66,11 +69,11 @@ public class OpenAiHandler: Handler
         );
     }
 
-    protected void LogAnalytics(long chatId, string model, string provider)
+    protected void LogAnalytics(long chatId, string model, string provider, ChatMode mode)
     {
         using var scope = _scopeFactory.CreateScope();
         var analyticsService = scope.ServiceProvider.GetRequiredService<AnalyticsService>();
-        analyticsService.LogAnalytics(chatId, model, provider);
+        analyticsService.LogAnalytics(chatId, model, provider, mode);
     }
 
     private List<Message> GetHistory(long ChatId)

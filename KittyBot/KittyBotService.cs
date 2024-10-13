@@ -1,4 +1,4 @@
-using KittyBot.callbacks;
+using KittyBot.buttons;
 using KittyBot.database;
 using KittyBot.handlers;
 using KittyBot.handlers.commands;
@@ -134,7 +134,7 @@ public class KittyBotService : IHostedService
 
         if (update.CallbackQuery is { } callback)
         {
-            HandleCallback(client, callback);
+            HandleCallback(client, callback, cancelToken);
             return;
         }
 
@@ -215,8 +215,10 @@ public class KittyBotService : IHostedService
         var lowerMessage = messageText.ToLower();
         var replyToAuthor = message.ReplyToMessage?.From?.Username;
         if (lowerMessage.StartsWith("бот ") || lowerMessage.StartsWith("бот,") || lowerMessage.StartsWith("бот.") ||
-            lowerMessage.Equals("бот") || lowerMessage.StartsWith($"@{_botname}") ||
-            (replyToAuthor != null && replyToAuthor.Equals(_botname)))
+            lowerMessage.Equals("бот") || messageText.StartsWith($"@{_botname}") ||
+            (replyToAuthor != null && replyToAuthor.Equals(_botname)) ||
+            message.Chat.Id > 0 // personal messages
+            )
         {
             using var scope = _scopeFactory.CreateScope();
             var geminiHandler = scope.ServiceProvider.GetRequiredService<GeminiHandler>();
@@ -256,13 +258,13 @@ public class KittyBotService : IHostedService
         }
     }
 
-    private void HandleCallback(ITelegramBotClient client, CallbackQuery callback)
+    private void HandleCallback(ITelegramBotClient client, CallbackQuery callback, CancellationToken cancelToken)
     {
         if (callback.Data is null || callback.Message is null) return;
         using var scope = _scopeFactory.CreateScope();
         var callbackFactory = scope.ServiceProvider.GetRequiredService<CallbackActionFactory>();
         var callbackAction = callbackFactory.GetCallbackActionByName(callback.Data);
-        callbackAction?.Handle(callback);
+        callbackAction?.Handle(client, callback, cancelToken);
         client.MakeRequestAsync(new AnswerCallbackQueryRequest { CallbackQueryId = callback.Id});
     }
 

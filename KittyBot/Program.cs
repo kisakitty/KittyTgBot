@@ -1,4 +1,4 @@
-﻿using KittyBot.callbacks;
+﻿using KittyBot.buttons;
 using KittyBot.database;
 using KittyBot.handlers;
 using KittyBot.handlers.commands;
@@ -44,6 +44,7 @@ public static class Program
             services.AddScoped<GetAnalyticsCommand>();
             services.AddScoped<GetBirthdaysCommand>();
             services.AddScoped<ClearContextCommand>();
+            services.AddScoped<SetModeCommand>();
             services.AddScoped<SetBirthdayCommand>();
             services.AddScoped<ForceSetBirthdayCommand>();
             services.AddScoped<GetStatsPieCommand>();

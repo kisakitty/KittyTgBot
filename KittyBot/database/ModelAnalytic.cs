@@ -22,4 +22,7 @@ public class ModelAnalytic
     [Required]
     [NotNull]
     public long? CountRequests { get; set; }
+    
+    [Required]
+    public ChatMode ChatMode { get; set; }
 }

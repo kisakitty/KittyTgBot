@@ -15,4 +15,7 @@ public class HistoricalMessage
     
     [Required]
     public bool IsBot { get; set; }
+    
+    [Required]
+    public ChatMode ChatMode { get; set; }
 }

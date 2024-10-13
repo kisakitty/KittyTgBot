@@ -86,5 +86,29 @@ namespace KittyBot.Resources {
                 return ResourceManager.GetString("SelectLanguage", resourceCulture);
             }
         }
+        
+        internal static string NEUTRAL {
+            get {
+                return ResourceManager.GetString("NEUTRAL", resourceCulture);
+            }
+        }
+        
+        internal static string EVIL {
+            get {
+                return ResourceManager.GetString("EVIL", resourceCulture);
+            }
+        }
+        
+        internal static string PSYCHOLOGY {
+            get {
+                return ResourceManager.GetString("PSYCHOLOGY", resourceCulture);
+            }
+        }
+        
+        internal static string CUSTOM {
+            get {
+                return ResourceManager.GetString("CUSTOM", resourceCulture);
+            }
+        }
     }
 }

@@ -81,7 +81,10 @@ public class Gpt4FreeHandler: OpenAiHandler
         LogHistoryMessages(formattedMessage, messageContent, update.Message.Chat.Id);
         if (response is { model: not null, provider: not null })
         {
-            LogAnalytics(chatId, response.model, response.provider);
+            using var responseConfigServiceScope = _scopeFactory.CreateScope();
+            var responseConfigService = responseConfigServiceScope.ServiceProvider.GetRequiredService<ResponseConfigService>();
+            var mode = responseConfigService.GetChatMode(chatId);
+            LogAnalytics(chatId, response.model, response.provider, mode);
         }
         try
         {

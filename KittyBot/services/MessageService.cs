@@ -41,12 +41,12 @@ public class MessageService
             .ToList();
     }
     
-    public List<GeminiMessage> GetPreviousMessagesGemini(long chatId, int limit)
+    public List<GeminiMessage> GetPreviousMessagesGemini(long chatId, int limit, ChatMode mode)
     {
         var messages = 
                 from msg in _db.Messages 
                 orderby msg.Id
-                where msg.ChatId == chatId 
+                where msg.ChatId == chatId && msg.ChatMode == mode
                 select msg;
         return messages
             .Skip(Math.Max(0, messages.Count() - limit))
@@ -54,9 +54,9 @@ public class MessageService
             .ToList();
     }
     
-    public void ClearChatMessages(long chatId)
+    public void ClearChatMessages(long chatId, ChatMode mode)
     {
-        var chatMessages = _db.Messages.Where(m => m.ChatId == chatId).ToList();
+        var chatMessages = _db.Messages.Where(m => m.ChatId == chatId && m.ChatMode == mode).ToList();
         _db.Messages.RemoveRange(chatMessages);
         _db.SaveChanges();
     }

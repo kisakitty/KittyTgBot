@@ -32,7 +32,9 @@
 /analytics — get LLM statistics
 /hellomsg — enable/disable hello message
 /chatbot — enable/disable chat bot answers
-/clearcontext — clear chat context</value>
+/clearcontext — clear chat context
+/setmode — change the communication style
+</value>
     </data>
     <data name="Start" xml:space="preserve">
         <value>Hello! Send me /help, if you want to know how to use me :)</value>
@@ -48,5 +50,17 @@
     </data>
     <data name="SelectLanguage" xml:space="preserve">
         <value>Select Language</value>
+    </data>
+    <data name="NEUTRAL" xml:space="preserve">
+        <value>🤖 Neutral</value>
+    </data>
+    <data name="EVIL" xml:space="preserve">
+        <value>😈 Evil</value>
+    </data>
+    <data name="PSYCHOLOGY" xml:space="preserve">
+        <value>🤓 Psychologist</value>
+    </data>
+    <data name="CUSTOM" xml:space="preserve">
+        <value>💿 Custom</value>
     </data>
 </root>

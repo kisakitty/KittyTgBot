@@ -42,6 +42,7 @@ public class CommandFactory
             case "/hellomsg": return scope.ServiceProvider.GetRequiredService<ReverseHelloMessageConfigCommand>();
             case "/chatbot": return scope.ServiceProvider.GetRequiredService<ReverseChatBotCommand>();
             case "/clearcontext": return scope.ServiceProvider.GetRequiredService<ClearContextCommand>();
+            case "/setmode": return scope.ServiceProvider.GetRequiredService<SetModeCommand>();
         }
         return _userCommands.GetValueOrDefault(commandName, _defaultCommand);
     }

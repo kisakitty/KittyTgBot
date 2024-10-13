@@ -1,6 +1,6 @@
 using KittyBot.callbacks;
-using KittyBot.database;
 using KittyBot.services;
+using Telegram.Bot;
 using Telegram.Bot.Types;
 
 namespace KittyBot.buttons;
@@ -14,7 +14,7 @@ public class SetEnglish: CallbackAction
         _localeService = localeService;
     }
     
-    public void Handle(CallbackQuery callback)
+    public void Handle(ITelegramBotClient client, CallbackQuery callback, CancellationToken cancelToken)
     {
         throw new NotImplementedException();
     }

@@ -1,3 +1,4 @@
 #!/bin/zsh
 
-docker build -t docker.io/kisakitty/kitty-bot -f Containerfile . 
+d=$(date +%Y-%m-%d)
+docker build -t docker.io/kisakitty/kitty-bot -t docker.io/kisakitty/kitty-bot:$d -f Containerfile . 

@@ -15,4 +15,7 @@ public class ResponseConfig
     
     [Required]
     public bool ChatBot { get; set; }
+    
+    [Required]
+    public ChatMode Mode { get; set; }
 }

@@ -11,15 +11,15 @@ public class AnalyticsService
         _db = db;
     }
 
-    public void LogAnalytics(long chatId, string model, string provider)
+    public void LogAnalytics(long chatId, string model, string provider, ChatMode mode)
     {
         var currentAnalytics = (from analytic in _db.ModelsAnalytics
-            where analytic.ChatId == chatId && analytic.Model == model && analytic.Provider == provider
+            where analytic.ChatId == chatId && analytic.Model == model && analytic.Provider == provider && analytic.ChatMode == mode
             select analytic)
             .FirstOrDefault();
         if (currentAnalytics == null)
         {
-            _db.ModelsAnalytics.Add(new ModelAnalytic { ChatId = chatId, Model = model, Provider = provider, CountRequests = 1L });
+            _db.ModelsAnalytics.Add(new ModelAnalytic { ChatId = chatId, Model = model, Provider = provider, CountRequests = 1L, ChatMode = mode });
         }
         else
         {

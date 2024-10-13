@@ -13,13 +13,11 @@ public class ResponseConfigService
 
     public ResponseConfig GetResponseConfig(long chatId)
     {
-        var config = (from responseConfig in _db.ResponseConfigs
-                where responseConfig.ChatId == chatId 
-                select responseConfig).FirstOrDefault();
+        var config = GetChatConfig(chatId);
 
         if (config == null)
         {
-            var defaultConfig = new ResponseConfig { ChatId = chatId, HelloMessage = true, ChatBot = true };
+            var defaultConfig = new ResponseConfig { ChatId = chatId, HelloMessage = true, ChatBot = true, Mode = ChatMode.NEUTRAL };
             _db.Add(defaultConfig);
             _db.SaveChanges();
             return defaultConfig;
@@ -30,13 +28,11 @@ public class ResponseConfigService
 
     public bool ReverseHelloMessageStatus(long chatId)
     {
-        var config = (from responseConfig in _db.ResponseConfigs
-            where responseConfig.ChatId == chatId 
-            select responseConfig).FirstOrDefault();
+        var config = GetChatConfig(chatId);
         
         if (config == null)
         {
-            var newConfig = new ResponseConfig { ChatId = chatId, HelloMessage = false, ChatBot = true };
+            var newConfig = new ResponseConfig { ChatId = chatId, HelloMessage = false, ChatBot = true, Mode = ChatMode.NEUTRAL };
             _db.Add(newConfig);
             _db.SaveChanges();
             return false;
@@ -48,13 +44,11 @@ public class ResponseConfigService
 
     public bool ReverseChatBotStatus(long chatId)
     {
-        var config = (from responseConfig in _db.ResponseConfigs
-            where responseConfig.ChatId == chatId 
-            select responseConfig).FirstOrDefault();
+        var config = GetChatConfig(chatId);
         
         if (config == null)
         {
-            var newConfig = new ResponseConfig { ChatId = chatId, HelloMessage = true, ChatBot = false };
+            var newConfig = new ResponseConfig { ChatId = chatId, HelloMessage = true, ChatBot = false, Mode = ChatMode.NEUTRAL };
             _db.Add(newConfig);
             _db.SaveChanges();
             return false;
@@ -63,6 +57,37 @@ public class ResponseConfigService
         _db.SaveChanges();
         return config.ChatBot;
     }
-    
-    
+
+    public ChatMode GetChatMode(long chatId)
+    {
+        var config = GetChatConfig(chatId);
+        if (config != null) return config.Mode;
+        var newConfig = new ResponseConfig { ChatId = chatId, HelloMessage = true, ChatBot = false, Mode = ChatMode.NEUTRAL };
+        _db.Add(newConfig);
+        _db.SaveChanges();
+        return ChatMode.NEUTRAL;
+
+    }
+
+    public void SetChatMode(long chatId, ChatMode mode)
+    {
+        var config = GetChatConfig(chatId);
+        if (config == null)
+        {
+            _db.Add(new ResponseConfig { ChatId = chatId, HelloMessage = true, ChatBot = false, Mode = mode });
+        }
+        else
+        {
+            config.Mode = mode;
+        }
+        _db.SaveChanges();
+    }
+
+    private ResponseConfig? GetChatConfig(long chatId)
+    {
+        var config = (from responseConfig in _db.ResponseConfigs
+            where responseConfig.ChatId == chatId 
+            select responseConfig).FirstOrDefault();
+        return config;
+    }
 }
