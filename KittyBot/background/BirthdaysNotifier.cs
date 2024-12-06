@@ -43,15 +43,22 @@ public class BirthdaysNotifier : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         using var timer = new CronTimer("0 0 * * *", TimeZoneInfo.Local);
+        Log.Information($"Start birthday notifier");
         while (await timer.WaitForNextTickAsync())
         {
+            Log.Information($"Notifying birthdays");
             AnnounceBirthdays(stoppingToken);
         }
     }
 
     private void AnnounceBirthdays(CancellationToken cancelToken)
     {
-        GetTodayBirthdays().ForEach(async birthday =>
+        var birthdays = GetTodayBirthdays();
+        if (birthdays.Count == 0)
+        {
+            Log.Information("No birthdays found today");
+        }
+        birthdays.ForEach(async birthday =>
         {
             var userChatList = GetUserChats(birthday.User.Id);
             if (userChatList.Count == 0)
