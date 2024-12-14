@@ -107,7 +107,7 @@ public static class Util
         }
         var buffer = new byte[fileInfo.FileSize ?? 20 * 1024 * 1024];
         await using Stream fileStream = new MemoryStream(buffer);
-        await client.DownloadFileAsync(
+        await client.DownloadFile(
             filePath: filePath,
             destination: fileStream,
             cancellationToken: cancelToken);

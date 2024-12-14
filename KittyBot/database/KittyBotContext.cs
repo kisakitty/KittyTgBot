@@ -51,6 +51,8 @@ public class KittyBotContext: DbContext
     public DbSet<HistoricalMessage> Messages { get; set; }
     
     public DbSet<Stats> Stats { get; set; }
+
+    public DbSet<Reaction> Reactions { get; set; }
     
     public DbSet<ChatLanguage> ChatsLanguages { get; set; }
     

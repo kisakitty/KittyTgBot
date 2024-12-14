@@ -30,7 +30,7 @@
         <PackageReference Include="Serilog.Sinks.File" Version="5.0.1-dev-00976" />
         <PackageReference Include="Sgbj.Cron.CronTimer" Version="1.0.2" />
         <PackageReference Include="System.Net.Http.Json" Version="8.0.0" />
-        <PackageReference Include="Telegram.Bot" Version="21.10.1" />
+        <PackageReference Include="Telegram.Bot" Version="22.2.0" />
     </ItemGroup>
 
 

@@ -62,6 +62,7 @@ public class StatsSerivce
         _db.SaveChanges();
     }
 
+    // TODO duplication
     private User GetOrCreateDbUser(Telegram.Bot.Types.User tgUser)
     {
         var user = (from u in _db.Users where u.UserId == tgUser.Id select u).FirstOrDefault();

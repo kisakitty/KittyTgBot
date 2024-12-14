@@ -23,6 +23,8 @@ public class KittyBotService : IHostedService
     private const string AdminsListIdsEnv = "ADMIN_TG_IDS";
 
     private const string ChatsWhitelistEnv = "CHATS_WHITELIST";
+    
+    private readonly UpdateType[] _allowedUpdates = [ UpdateType.Message, UpdateType.CallbackQuery, UpdateType.ChatMember, UpdateType.MessageReaction ];
 
     private readonly TelegramBotClient _botClient;
 
@@ -84,7 +86,7 @@ public class KittyBotService : IHostedService
 
         ReceiverOptions receiverOptions = new()
         {
-            AllowedUpdates = Array.Empty<UpdateType>(),
+            AllowedUpdates = _allowedUpdates,
             DropPendingUpdates = true
         };
 
@@ -122,10 +124,52 @@ public class KittyBotService : IHostedService
         }
     }
 
+    private void HandleReaction(ITelegramBotClient client, Update update, CancellationToken cancelToken)
+    {
+        if (update.Type != UpdateType.MessageReaction || update.MessageReaction == null) return;
+        var newEmoji = "";
+        var removedEmoji = "";
+        var newReact = update.MessageReaction.NewReaction.Length > 0;
+        var removedReact = update.MessageReaction.OldReaction.Length > 0;
+        if (newReact)
+        {
+            newEmoji = update.MessageReaction.NewReaction[0].Type switch
+            {
+                ReactionTypeKind.Emoji => ((ReactionTypeEmoji)update.MessageReaction.NewReaction[0]).Emoji,
+                ReactionTypeKind.CustomEmoji => ((ReactionTypeCustomEmoji)update.MessageReaction.NewReaction[0])
+                    .CustomEmojiId,
+                ReactionTypeKind.Paid => "⭐️",
+                _ => newEmoji
+            };
+        }
+        if (removedReact)
+        {
+            removedEmoji = update.MessageReaction.OldReaction[0].Type switch
+            {
+                ReactionTypeKind.Emoji => ((ReactionTypeEmoji)update.MessageReaction.OldReaction[0]).Emoji,
+                ReactionTypeKind.CustomEmoji => ((ReactionTypeCustomEmoji)update.MessageReaction.OldReaction[0])
+                    .CustomEmojiId,
+                ReactionTypeKind.Paid => "⭐️",
+                _ => removedEmoji
+            };
+        }
+        using var scope = _scopeFactory.CreateScope();
+        var reactionsService = scope.ServiceProvider.GetRequiredService<ReactionsService>();
+        if (update.MessageReaction?.User != null && newReact)
+        {
+            reactionsService.LogReaction(update.MessageReaction.User, update.MessageReaction.Chat.Id, newEmoji);
+        }
+        if (update.MessageReaction?.User != null && removedReact)
+        {
+            reactionsService.RemoveReaction(update.MessageReaction.User, update.MessageReaction.Chat.Id, removedEmoji);
+        }
+    }
+
     private async Task HandleUpdateWithExceptions(ITelegramBotClient client, Update update, CancellationToken cancelToken)
     {
         using var scope = _scopeFactory.CreateScope();
         var userService = scope.ServiceProvider.GetRequiredService<UserService>();
+        HandleReaction(client, update, cancelToken);
         if (update.Message?.From is not null)
         {
             userService.CreateOrUpdateUser(update.Message.From.Id, update.Message.From.Username,

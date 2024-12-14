@@ -39,6 +39,7 @@ public static class Program
             services.AddScoped<AnalyticsService>();
             services.AddScoped<BirthdaysService>();
             services.AddScoped<LocaleService>();
+            services.AddScoped<ReactionsService>();
             services.AddScoped<CommandFactory>();
             services.AddScoped<GetStatsCommand>();
             services.AddScoped<GetAnalyticsCommand>();
