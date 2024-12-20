@@ -58,7 +58,7 @@ public class ReactionsService
                      .OrderByDescending(eg => eg.Sum(r => r.Count))
                      .First()
                      .Key
-            )).ToList();
+            )).ToList().OrderByDescending(r => r.total).ToList();
     }
 
     public List<ReactionStatByGroups> GetUserStatistics(long userTgId)
@@ -74,19 +74,6 @@ public class ReactionsService
                      .OrderByDescending(eg => eg.Sum(r => r.Count))
                      .First()
                      .Key
-            )).ToList();
-    }
-
-    // TODO duplication
-    private database.User GetOrCreateDbUser(Telegram.Bot.Types.User tgUser)
-    {
-        var user = (from u in _db.Users where u.UserId == tgUser.Id select u).FirstOrDefault();
-        if (user is null)
-            user = _db.Users.Add(new database.User
-            {
-                UserId = tgUser.Id, Username = tgUser.Username, FirstName = tgUser.FirstName, LastName = tgUser.LastName
-            }).Entity;
-
-        return user;
+            )).ToList().OrderByDescending(r => r.total).ToList();
     }
 }
