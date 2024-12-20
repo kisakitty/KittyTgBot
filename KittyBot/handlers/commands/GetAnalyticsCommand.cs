@@ -25,7 +25,7 @@ public class GetAnalyticsCommand: Command
         var modelAnalytics = analyticsService.GetAnalytics(chatId);
         if (modelAnalytics.Count == 0)
         {
-            await client.SendTextMessageAsync(
+            await client.SendMessage(
                 chatId: chatId,
                 text: "Никакх запросов к LLM не было в этом чатике",
                 cancellationToken: cancelToken,
@@ -42,7 +42,7 @@ public class GetAnalyticsCommand: Command
             sb.Append(newLine);
         });
         
-        await client.SendTextMessageAsync(
+        await client.SendMessage(
             chatId: chatId,
             text: sb.ToString(),
             cancellationToken: cancelToken,

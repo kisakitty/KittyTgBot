@@ -21,7 +21,7 @@ public class GetStatsCommand : Command
     protected override async Task HandleCommand(ITelegramBotClient client, Message message, CancellationToken cancelToken)
     {
         using var statsServiceScope = _scopeFactory.CreateScope();
-        var statsService = statsServiceScope.ServiceProvider.GetRequiredService<StatsSerivce>();
+        var statsService = statsServiceScope.ServiceProvider.GetRequiredService<StatsService>();
 
         var sb = new StringBuilder();
         sb.Append("Статистика по сообщениям\n");
@@ -42,7 +42,7 @@ public class GetStatsCommand : Command
         chunks.Add(sb.ToString());
         foreach (var chunk in chunks)
         {
-            await client.SendTextMessageAsync(
+            await client.SendMessage(
                 chatId: message.Chat.Id,
                 text: chunk,
                 cancellationToken: cancelToken,

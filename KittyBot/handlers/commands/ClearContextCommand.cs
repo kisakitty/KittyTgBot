@@ -24,7 +24,7 @@ public class ClearContextCommand: Command
         var responseConfigService = scope.ServiceProvider.GetRequiredService<ResponseConfigService>();
         var currentMode = responseConfigService.GetChatMode(chatId);
         messageService.ClearChatMessages(chatId, currentMode);
-        await client.SendTextMessageAsync(
+        await client.SendMessage(
             chatId: message.Chat.Id,
             text: $"История общения со мной очищена \\(в рамках режима *{Localizer.GetValue(currentMode.ToString(), Locale.RU)}*\\) 👌",
             cancellationToken: cancelToken,

@@ -60,7 +60,7 @@ public class OpenAiHandler: Handler
         var responseConfigService = responseConfigServiceScope.ServiceProvider.GetRequiredService<ResponseConfigService>();
         var mode = responseConfigService.GetChatMode(chatId);
         LogAnalytics(chatId, "gpt-3.5-turbo", "OpenAI API", mode);
-        await client.SendTextMessageAsync(
+        await client.SendMessage(
             chatId: chatId,
             text: answer,
             cancellationToken: cancelToken,

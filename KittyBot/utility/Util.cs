@@ -99,7 +99,7 @@ public static class Util
             return null;
         }
         var photoId = tgMessage.Photo.Last().FileId;
-        var fileInfo = await client.GetFileAsync(photoId, cancellationToken: cancelToken);
+        var fileInfo = await client.GetFile(photoId, cancellationToken: cancelToken);
         var filePath = fileInfo.FilePath;
         if (filePath is null)
         {

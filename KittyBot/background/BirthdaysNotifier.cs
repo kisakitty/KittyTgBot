@@ -43,10 +43,10 @@ public class BirthdaysNotifier : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         using var timer = new CronTimer("0 0 * * *", TimeZoneInfo.Local);
-        Log.Information($"Start birthday notifier");
-        while (await timer.WaitForNextTickAsync())
+        Log.Information("Start birthday notifier");
+        while (await timer.WaitForNextTickAsync(stoppingToken))
         {
-            Log.Information($"Notifying birthdays");
+            Log.Information("Notifying birthdays");
             AnnounceBirthdays(stoppingToken);
         }
     }
@@ -63,6 +63,7 @@ public class BirthdaysNotifier : BackgroundService
             var userChatList = GetUserChats(birthday.User.Id);
             if (userChatList.Count == 0)
             {
+                Log.Information($"No chats for user {birthday.User.Username}");
                 return;
             }
             var announce = await GenerateText(cancelToken, birthday);
@@ -74,7 +75,7 @@ public class BirthdaysNotifier : BackgroundService
                 Log.Information($"Announce for chat {chatId}");
                 try
                 {
-                    await _botClient.SendTextMessageAsync(
+                    await _botClient.SendMessage(
                         chatId: chatId,
                         cancellationToken: cancelToken,
                         text: announce
@@ -116,7 +117,7 @@ public class BirthdaysNotifier : BackgroundService
     private List<long> GetUserChats(long userId)
     {
         using var statsServiceScope = _scopeFactory.CreateScope();
-        var statsService = statsServiceScope.ServiceProvider.GetRequiredService<StatsSerivce>();
+        var statsService = statsServiceScope.ServiceProvider.GetRequiredService<StatsService>();
         return statsService.GetUserChats(userId);
     }
 }

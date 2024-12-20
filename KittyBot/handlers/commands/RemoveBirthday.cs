@@ -23,14 +23,14 @@ public class RemoveBirthday : Command
         var birthdaysService = scope.ServiceProvider.GetRequiredService<BirthdaysService>();
         if (birthdaysService.RemoveBirthday(message.From))
         {
-            await client.SendTextMessageAsync(
+            await client.SendMessage(
                 chatId: chatId,
                 text: "Пока что не буду поздравлять тебя с днём рождения 👌",
                 cancellationToken: cancelToken);
         }
         else
         {
-            await client.SendTextMessageAsync(
+            await client.SendMessage(
                 chatId: chatId,
                 text: "Я и так не знаю когда у тебя день рождения 😅",
                 cancellationToken: cancelToken);

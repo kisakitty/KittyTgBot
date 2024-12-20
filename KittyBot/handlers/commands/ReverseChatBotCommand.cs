@@ -21,16 +21,16 @@ public class ReverseChatBotCommand: Command
 
         if (chatId > 0)
         {
-            await client.SendTextMessageAsync(
+            await client.SendMessage(
                 chatId: chatId,
                 text: "В приватном чате эта команда бессмысленна",
                 cancellationToken: cancelToken);
             return;
         }
-        var chatAdministrators = await client.GetChatAdministratorsAsync(message.Chat.Id, cancelToken);
+        var chatAdministrators = await client.GetChatAdministrators(message.Chat.Id, cancelToken);
         if (chatAdministrators.All(admin => admin.User.Id != message.From.Id)) 
         {
-            await client.SendTextMessageAsync(
+            await client.SendMessage(
                 chatId: chatId,
                 text: "Ты не админ! Попроси кого-нибудь с плашкой запустить эту команду",
                 cancellationToken: cancelToken);
@@ -40,14 +40,14 @@ public class ReverseChatBotCommand: Command
         var responseConfigService = scope.ServiceProvider.GetRequiredService<ResponseConfigService>();
         if (responseConfigService.ReverseChatBotStatus(chatId))
         {
-            await client.SendTextMessageAsync(
+            await client.SendMessage(
                 chatId: chatId,
                 text: "Я снова здесь! Позови меня (по никнейму или просто \"бот\") и я приду!",
                 cancellationToken: cancelToken);
         }
         else
         {
-            await client.SendTextMessageAsync(
+            await client.SendMessage(
                 chatId: chatId,
                 text: "Заткнулся 🤐",
                 cancellationToken: cancelToken);

@@ -21,16 +21,16 @@ public class ReverseHelloMessageConfigCommand: Command
 
         if (chatId > 0)
         {
-            await client.SendTextMessageAsync(
+            await client.SendMessage(
                 chatId: chatId,
                 text: "В приватном чате эта команда бессмысленна",
                 cancellationToken: cancelToken);
             return;
         }
-        var chatAdministrators = await client.GetChatAdministratorsAsync(chatId, cancelToken);
+        var chatAdministrators = await client.GetChatAdministrators(chatId, cancelToken);
         if (chatAdministrators.All(admin => admin.User.Id != message.From.Id)) 
         {
-            await client.SendTextMessageAsync(
+            await client.SendMessage(
                 chatId: chatId,
                 text: "Ты не админ! Попроси кого-нибудь с плашкой запустить эту команду",
                 cancellationToken: cancelToken);
@@ -40,14 +40,14 @@ public class ReverseHelloMessageConfigCommand: Command
         var responseConfigService = scope.ServiceProvider.GetRequiredService<ResponseConfigService>();
         if (responseConfigService.ReverseHelloMessageStatus(chatId))
         {
-            await client.SendTextMessageAsync(
+            await client.SendMessage(
                 chatId: chatId,
                 text: "Теперь буду приветствовать от всего процессорного сердца каждого нового участника!",
                 cancellationToken: cancelToken);
         }
         else
         {
-            await client.SendTextMessageAsync(
+            await client.SendMessage(
                 chatId: chatId,
                 text: "Пока не буду отпугивать новых учатников своим трёпом 👌",
                 cancellationToken: cancelToken);

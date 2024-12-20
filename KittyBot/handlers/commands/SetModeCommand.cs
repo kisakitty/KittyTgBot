@@ -33,7 +33,7 @@ public class SetModeCommand: Command
         }
         inlineMarkup.AddButton("Отмена", "removeMessage");
 
-        await client.SendTextMessageAsync(
+        await client.SendMessage(
             chatId: chatId,
             text: $"Текущий режим: *{Localizer.GetValue(currentMode.ToString(), Locale.RU)}*\nВыберите новый из списка",
             cancellationToken: cancelToken,

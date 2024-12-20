@@ -17,7 +17,7 @@ public class HelloHandler(long? botId) : Handler
         if (update.Message?.NewChatMembers is null) return;
         foreach (var newMember in update.Message.NewChatMembers)
         {
-            var chat = await client.GetChatAsync(update.Message!.Chat.Id, cancelToken);
+            var chat = await client.GetChat(update.Message!.Chat.Id, cancelToken);
             var userName = Util.FormatUserName(newMember, true);
             var fullName = Util.FormatNames(newMember);
             var chatTitle = update.Message?.Chat.Title;
@@ -28,7 +28,7 @@ public class HelloHandler(long? botId) : Handler
             {
                 continue;
             }
-            await client.SendTextMessageAsync(
+            await client.SendMessage(
                 chatId: update.Message!.Chat.Id,
                 text: response,
                 cancellationToken: cancelToken,

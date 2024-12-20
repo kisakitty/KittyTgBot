@@ -22,7 +22,7 @@ public class CatCommand: Command
             var catLink = await CatClient.GetFromJsonAsync<List<CatLink>>("/v1/images/search");
             if (catLink != null && catLink.Count > 0 && catLink[0].url != null)
             {
-                await client.SendPhotoAsync(
+                await client.SendPhoto(
                     chatId: chatId,
                     photo: new InputFileUrl(catLink[0].url),
                     cancellationToken: cancelToken,
@@ -33,7 +33,7 @@ public class CatCommand: Command
         catch (Exception ex)
         {
             Log.Error(ex, "Error on getting cat's image");
-            await client.SendTextMessageAsync(
+            await client.SendMessage(
                 chatId: chatId,
                 text: "Какая-то ошибка случилась. Сделай запрос кота ещё раз",
                 cancellationToken: cancelToken,

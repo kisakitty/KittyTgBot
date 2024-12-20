@@ -15,6 +15,8 @@ namespace KittyBot;
 public static class Program
 {
     private const string LogDirectoryEnv = "KITTY_LOG_DIRECTORY";
+
+    private const string LogFilename = "kitty.log";
     
     private const string TelegramEnv = "TELEGRAM_BOT_TOKEN";
 
@@ -34,7 +36,7 @@ public static class Program
             services.AddScoped<UserService>();
             services.AddScoped<EventService>();
             services.AddScoped<MessageService>();
-            services.AddScoped<StatsSerivce>();
+            services.AddScoped<StatsService>();
             services.AddScoped<ResponseConfigService>();
             services.AddScoped<AnalyticsService>();
             services.AddScoped<BirthdaysService>();
@@ -48,6 +50,7 @@ public static class Program
             services.AddScoped<SetModeCommand>();
             services.AddScoped<SetBirthdayCommand>();
             services.AddScoped<ForceSetBirthdayCommand>();
+            services.AddScoped<GetReactionsStatisticsCommand>();
             services.AddScoped<GetStatsPieCommand>();
             services.AddScoped<GetStatsChartCommand>();
             services.AddScoped<ReverseHelloMessageConfigCommand>();
@@ -95,14 +98,16 @@ public static class Program
 
     private static void SetLogger()
     {
-        string? logDirectory = Environment.GetEnvironmentVariable(LogDirectoryEnv);
         var loggerConfiguration = new LoggerConfiguration()
             .MinimumLevel.Debug()
             .WriteTo.Console();
+        var logDirectory = Environment.GetEnvironmentVariable(LogDirectoryEnv);
         if (logDirectory != null)
         {
-            loggerConfiguration = loggerConfiguration.WriteTo.File(logDirectory, rollingInterval: RollingInterval.Day);   
+            Directory.CreateDirectory(logDirectory);
+            loggerConfiguration = loggerConfiguration.WriteTo.File(Path.Combine(logDirectory, LogFilename), rollingInterval: RollingInterval.Day);   
         }
+
         Log.Logger = loggerConfiguration.CreateLogger();   
     }
 }

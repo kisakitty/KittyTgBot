@@ -64,16 +64,16 @@ public class KittyBotService : IHostedService
         }
 
         _botClient = client;
-        client.GetMeAsync().ContinueWith(Task =>
+        client.GetMe().ContinueWith(task =>
         {
-            if (Task.Exception != null)
+            if (task.Exception != null)
             {
-                Log.Error(Task.Exception, "Unable to get bot's telegram ID");
+                Log.Error(task.Exception, "Unable to get bot's telegram ID");
                 return;
             }
 
-            _myId = Task.Result.Id;
-            _botname = Task.Result.Username;
+            _myId = task.Result.Id;
+            _botname = task.Result.Username;
             Log.Information($"My bot ID: {_myId}");
             Log.Information($"My username: {_botname}");
             _helloHandler = new HelloHandler(_myId);
@@ -155,13 +155,15 @@ public class KittyBotService : IHostedService
         }
         using var scope = _scopeFactory.CreateScope();
         var reactionsService = scope.ServiceProvider.GetRequiredService<ReactionsService>();
-        if (update.MessageReaction?.User != null && newReact)
+        var statsService = scope.ServiceProvider.GetRequiredService<StatsService>();
+        var messageAuthor = statsService.GetMessageAuthor(update.MessageReaction.Chat.Id, update.MessageReaction.MessageId);
+        if (newReact && messageAuthor != null && messageAuthor.UserId != update.MessageReaction.User?.Id)
         {
-            reactionsService.LogReaction(update.MessageReaction.User, update.MessageReaction.Chat.Id, newEmoji);
+            reactionsService.LogReaction(messageAuthor, update.MessageReaction.Chat.Id, newEmoji);
         }
-        if (update.MessageReaction?.User != null && removedReact)
+        if (removedReact && messageAuthor != null && messageAuthor.UserId != update.MessageReaction.User?.Id)
         {
-            reactionsService.RemoveReaction(update.MessageReaction.User, update.MessageReaction.Chat.Id, removedEmoji);
+            reactionsService.RemoveReaction(messageAuthor, update.MessageReaction.Chat.Id, removedEmoji);
         }
     }
 
@@ -191,8 +193,8 @@ public class KittyBotService : IHostedService
         
         if (message.From != null)
         {
-            var statsService = scope.ServiceProvider.GetRequiredService<StatsSerivce>();
-            statsService.LogStats(message.From, message.Chat.Id);
+            var statsService = scope.ServiceProvider.GetRequiredService<StatsService>();
+            statsService.LogStats(message.From, message.Chat.Id, message.Id);
         }
 
         // Only process text messages
@@ -232,7 +234,7 @@ public class KittyBotService : IHostedService
     private void HandleUserStats(ITelegramBotClient client, Update update, CancellationToken cancelToken)
     {
         using var scope = _scopeFactory.CreateScope();
-        var statsService = scope.ServiceProvider.GetRequiredService<StatsSerivce>();
+        var statsService = scope.ServiceProvider.GetRequiredService<StatsService>();
         var responseConfigService = scope.ServiceProvider.GetRequiredService<ResponseConfigService>();
         if (update.Message!.Type == MessageType.NewChatMembers)
         {
@@ -309,7 +311,7 @@ public class KittyBotService : IHostedService
         var callbackFactory = scope.ServiceProvider.GetRequiredService<CallbackActionFactory>();
         var callbackAction = callbackFactory.GetCallbackActionByName(callback.Data);
         callbackAction?.Handle(client, callback, cancelToken);
-        client.MakeRequestAsync(new AnswerCallbackQueryRequest { CallbackQueryId = callback.Id});
+        client.MakeRequest(new AnswerCallbackQueryRequest { CallbackQueryId = callback.Id});
     }
 
     public Task StopAsync(CancellationToken cancellationToken)

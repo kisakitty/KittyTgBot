@@ -20,13 +20,13 @@ public class SetChatMode: CallbackAction
     {
         if (callback.Message == null || callback.Data == null) return;
         _responseConfigService.SetChatMode(callback.Message.Chat.Id, Enum.Parse<ChatMode>(callback.Data));
-        client.SendTextMessageAsync(
+        client.SendMessage(
             chatId: callback.Message.Chat.Id,
             text: $"Режим установлен\\: *{Localizer.GetValue(callback.Data, Locale.RU)}*",
             parseMode: ParseMode.MarkdownV2,
             cancellationToken: cancelToken
         );
-        client.DeleteMessageAsync(
+        client.DeleteMessage(
             chatId: callback.Message.Chat.Id,
             messageId: callback.Message.MessageId,
             cancellationToken: cancelToken

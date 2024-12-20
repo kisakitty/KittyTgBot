@@ -3,20 +3,40 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KittyBot.services;
 
-public class StatsSerivce
+public class StatsService
 {
     private readonly KittyBotContext _db;
 
-    public StatsSerivce(KittyBotContext db)
+    public StatsService(KittyBotContext db)
     {
         _db = db;
     }
 
-    public void LogStats(Telegram.Bot.Types.User tgUser, long chatId)
+    public void LogStats(Telegram.Bot.Types.User tgUser, long chatId, long messageId)
+    {
+        CountMessage(tgUser, chatId);
+        RememberAuthor(tgUser, chatId, messageId);
+    }
+
+    public User? GetMessageAuthor(long chatId, long messageId)
+    {
+        return (from m in _db.CachedMessages
+            where m.ChatId == chatId && m.MessageId == messageId
+            select m.Author).FirstOrDefault();
+    }
+
+    private void RememberAuthor(Telegram.Bot.Types.User tgUser, long chatId, long messageId)
+    {
+        var user = GetOrCreateDbUser(tgUser);
+        _db.CachedMessages.Add(new ChatMessage { Author = user, ChatId = chatId, MessageId = messageId});
+        _db.SaveChanges();
+    }
+
+    private void CountMessage(Telegram.Bot.Types.User tgUser, long chatId)
     {
         var stats = (from s in _db.Stats 
-            where s.User.UserId == tgUser.Id && s.ChatId == chatId
-            select s)
+                where s.User.UserId == tgUser.Id && s.ChatId == chatId
+                select s)
             .FirstOrDefault();
 
         if (stats == null)

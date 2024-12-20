@@ -31,7 +31,7 @@ public class GetStatsChartCommand: Command
         var stream = new MemoryStream();
         var model = BuildPieModel(chatId);
         pngExporter.Export(model, stream);
-        await client.SendPhotoAsync(
+        await client.SendPhoto(
             chatId: chatId,
             photo: InputFile.FromStream(new MemoryStream(stream.ToArray())),
             replyParameters: new ReplyParameters { ChatId = message.Chat.Id, MessageId = message.MessageId },
@@ -41,7 +41,7 @@ public class GetStatsChartCommand: Command
     private IPlotModel BuildPieModel(long chatId)
     {
         using var statsServiceScope = _scopeFactory.CreateScope();
-        var statsService = statsServiceScope.ServiceProvider.GetRequiredService<StatsSerivce>();
+        var statsService = statsServiceScope.ServiceProvider.GetRequiredService<StatsService>();
 
         var stats = statsService
             .GetGlobalStatsLinks(chatId, true).Where(statsItem => statsItem.Value > MinCountMessages)

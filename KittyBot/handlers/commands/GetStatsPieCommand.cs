@@ -52,7 +52,7 @@ public class GetStatsPieCommand: Command
             var stream = new MemoryStream();
             var model = BuildPlotModel(chatId, fontSize);
             pngExporter.Export(model, stream);
-            await client.SendPhotoAsync(
+            await client.SendPhoto(
                 chatId: chatId,
                 photo: InputFile.FromStream(new MemoryStream(stream.ToArray())),
                 replyParameters: new ReplyParameters { ChatId = message.Chat.Id, MessageId = message.MessageId },
@@ -60,7 +60,7 @@ public class GetStatsPieCommand: Command
         }
         catch (BadInputException)
         {
-            await client.SendTextMessageAsync(
+            await client.SendMessage(
                 chatId: chatId,
                 text: $"Слишком большое разрешение и/или размер шрифта. Попробуй до {Max1DResolution}x{Max1DResolution}. Максимальный шрифт — {MaxFontSize}",
                 replyParameters: new ReplyParameters { ChatId = message.Chat.Id, MessageId = message.MessageId },
@@ -69,7 +69,7 @@ public class GetStatsPieCommand: Command
         catch (Exception ex)
         {
             Log.Error(ex, $"Birthday parse error. String: {message.Text}");
-            await client.SendTextMessageAsync(
+            await client.SendMessage(
                 chatId: chatId,
                 text: "Не могу распарсить комманду\\. Пришли в формате `/statschart <width> <height> <fontSize>`\\. \\<width\\>, \\<height\\> и \\<fontSize\\> опциональны \\(разрешение по умолчанию: 1920x1080\\, размер шрифта 28\\)\n\n" +
                       "" +
@@ -84,7 +84,7 @@ public class GetStatsPieCommand: Command
     private IPlotModel BuildPlotModel(long chatId, float fontSize)
     {
         using var statsServiceScope = _scopeFactory.CreateScope();
-        var statsService = statsServiceScope.ServiceProvider.GetRequiredService<StatsSerivce>();
+        var statsService = statsServiceScope.ServiceProvider.GetRequiredService<StatsService>();
 
         var stats = statsService.GetGlobalStatsLinks(chatId, true).Where(statsItem => statsItem.Value > MinCountMessages);
         var slices = stats.Select(statsItem => new PieSlice(statsItem.Key, statsItem.Value) { Fill = RandomColor() } ).ToList();

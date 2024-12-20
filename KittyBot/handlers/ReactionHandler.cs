@@ -29,7 +29,7 @@ public class ReactionHandler: Handler
         {
             if (update.Message.Text.ToLower().Contains(keyValue.Key))
             {
-                await client.SetMessageReactionAsync(
+                await client.SetMessageReaction(
                     new ChatId(update.Message.Chat.Id),
                     update.Message.MessageId,
                     new List<ReactionType> { keyValue.Value },

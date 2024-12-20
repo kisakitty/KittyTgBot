@@ -45,7 +45,7 @@ public partial class SetBirthdayCommand : Command
             await FormatError(client, cancelToken, chatId);
             return;
         }
-        await client.SendTextMessageAsync(
+        await client.SendMessage(
             chatId: chatId,
             text: $"Всё ок. Теперь я знаю что твой день рожденя наступит {localDateString}!",
             cancellationToken: cancelToken);
@@ -53,7 +53,7 @@ public partial class SetBirthdayCommand : Command
 
     private static async Task FormatError(ITelegramBotClient client, CancellationToken cancelToken, long chatId)
     {
-        await client.SendTextMessageAsync(
+        await client.SendMessage(
             chatId: chatId,
             text: "Не могу распарсить\\. Добавь свой день рождение в формате `/setbirthday DD-MM`",
             cancellationToken: cancelToken,

@@ -44,6 +44,8 @@ public class KittyBotContext: DbContext
 
     public DbSet<User> Users { get; set; }
 
+    public DbSet<ChatMessage> CachedMessages { get; set; }
+
     public DbSet<Event> Events { get; set; }
     
     public DbSet<Birthday> Birthdays { get; set; }

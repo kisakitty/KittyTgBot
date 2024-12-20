@@ -1,5 +1,5 @@
 using KittyBot.database;
-using User = Telegram.Bot.Types.User;
+using KittyBot.dto;
 
 namespace KittyBot.services;
 
@@ -12,16 +12,15 @@ public class ReactionsService
         _db = db;
     }
 
-    public void LogReaction(User tgUser, long chatId, string emoji)
+    public void LogReaction(User receiver, long chatId, string emoji)
     {
         var currentReactionCount = (from reaction in _db.Reactions
-                where reaction.ChatId == chatId && reaction.User.UserId == tgUser.Id && reaction.Emoji == emoji
+                where reaction.ChatId == chatId && receiver.Equals(reaction.User) && emoji.Equals(reaction.Emoji)
                 select reaction)
             .FirstOrDefault();
         if (currentReactionCount == null)
         {
-            var user = GetOrCreateDbUser(tgUser);
-            _db.Reactions.Add(new Reaction { ChatId = chatId, Count = 1, Emoji = emoji, User = user });
+            _db.Reactions.Add(new Reaction { ChatId = chatId, Count = 1, Emoji = emoji, User = receiver });
         }
         else
         {
@@ -32,10 +31,10 @@ public class ReactionsService
     }
 
 
-    public void RemoveReaction(User tgUser, long chatId, string emoji)
+    public void RemoveReaction(User receiver, long chatId, string emoji)
     {
         var currentReactionCount = (from reaction in _db.Reactions
-                where reaction.ChatId == chatId && reaction.User.UserId == tgUser.Id && reaction.Emoji == emoji
+                where reaction.ChatId == chatId && receiver.Equals(reaction.User) && emoji.Equals(reaction.Emoji)
                 select reaction)
             .FirstOrDefault();
         if (currentReactionCount == null) return;
@@ -46,8 +45,40 @@ public class ReactionsService
         _db.SaveChanges();
     }
 
+    public List<ReactionStatByUser> GetChatStatistics(long chatId)
+    {
+        return _db.Reactions
+            .Where(r => r.ChatId == chatId)
+            .GroupBy(r => r.User, r => r)
+            .Select(g => new ReactionStatByUser(
+                Util.FormatUserName(g.Key, false),
+                g.Sum(r => r.Count),
+                 g
+                     .GroupBy(r => r.Emoji)
+                     .OrderByDescending(eg => eg.Sum(r => r.Count))
+                     .First()
+                     .Key
+            )).ToList();
+    }
+
+    public List<ReactionStatByGroups> GetUserStatistics(long userTgId)
+    {
+        return _db.Reactions
+            .Where(r => r.User.UserId == userTgId)
+            .GroupBy(r => r.ChatId, r => r)
+            .Select(g => new ReactionStatByGroups(
+                g.Key,
+                g.Sum(r => r.Count),
+                 g
+                     .GroupBy(r => r.Emoji)
+                     .OrderByDescending(eg => eg.Sum(r => r.Count))
+                     .First()
+                     .Key
+            )).ToList();
+    }
+
     // TODO duplication
-    private database.User GetOrCreateDbUser(User tgUser)
+    private database.User GetOrCreateDbUser(Telegram.Bot.Types.User tgUser)
     {
         var user = (from u in _db.Users where u.UserId == tgUser.Id select u).FirstOrDefault();
         if (user is null)

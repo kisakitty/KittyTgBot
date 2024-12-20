@@ -9,7 +9,7 @@ public class HelpCommand: Command
 {
     protected override async Task HandleCommand(ITelegramBotClient client, Message message, CancellationToken cancelToken)
     {
-        await client.SendTextMessageAsync(
+        await client.SendMessage(
             chatId: message.Chat.Id,
             text: Localizer.GetValue("Help", Locale.RU),
             cancellationToken: cancelToken,

@@ -52,7 +52,7 @@ public class ForceSetBirthdayCommand: Command
         catch (ArgumentOutOfRangeException ex)
         {
             Log.Error(ex, $"Birthday parse error. String: {message.Text}");
-            await client.SendTextMessageAsync(
+            await client.SendMessage(
                 chatId: chatId,
                 text: $"Не могу найти такого дня. Проверь корректность даты :(",
                 cancellationToken: cancelToken);             return;
@@ -60,13 +60,13 @@ public class ForceSetBirthdayCommand: Command
         catch (NoFoundException ex)
         {
             Log.Error(ex, $"Cannot find user with username \"{username}\"");
-            await client.SendTextMessageAsync(
+            await client.SendMessage(
                 chatId: chatId,
                 text: $"Я не знаю пользователя {username}. Незнакомцев я не поздравляю :(",
                 cancellationToken: cancelToken); 
             return;
         }
-        await client.SendTextMessageAsync(
+        await client.SendMessage(
             chatId: chatId,
             text: $"Всё ок. Теперь я знаю что день рожденя пользователя {username} наступит {localDateString}!",
             cancellationToken: cancelToken);
@@ -88,7 +88,7 @@ public class ForceSetBirthdayCommand: Command
     
     private static async Task FormatError(ITelegramBotClient client, CancellationToken cancelToken, long chatId)
     {
-        await client.SendTextMessageAsync(
+        await client.SendMessage(
             chatId: chatId,
             text: "Не могу распарсить\\. Пришли в формате `/setbd @user DD-MM`",
             cancellationToken: cancelToken,

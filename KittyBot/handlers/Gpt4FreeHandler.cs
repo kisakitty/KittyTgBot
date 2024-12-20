@@ -88,7 +88,7 @@ public class Gpt4FreeHandler: OpenAiHandler
         }
         try
         {
-            await client.SendTextMessageAsync(
+            await client.SendMessage(
                 chatId: chatId,
                 text: messageContent,
                 cancellationToken: cancelToken,

@@ -70,7 +70,7 @@ public class EventsNotifier : BackgroundService
                 Log.Information($"Announce for chat {chatId}");
                 try
                 {
-                    await _botClient.SendPhotoAsync(
+                    await _botClient.SendPhoto(
                         chatId: chatId,
                         cancellationToken: cancelToken,
                         photo: new InputFileUrl(imageResults[0].Url),

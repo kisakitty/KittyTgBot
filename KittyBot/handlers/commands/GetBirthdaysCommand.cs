@@ -24,7 +24,7 @@ public class GetBirthdaysCommand : Command
         var birthdays = birthdaysService.GetBirthdaysThisMonth(message.Chat.Id);
         if (birthdays.Count == 0)
         {
-            await client.SendTextMessageAsync(
+            await client.SendMessage(
                 chatId: chatId,
                 text: "В этом месяце никто не отмечает день рождения 😔",
                 cancellationToken: cancelToken);
@@ -38,7 +38,7 @@ public class GetBirthdaysCommand : Command
             var localDateString = Util.LocalizeDate(new DateTime(2024, birthday.Month, birthday.Day), "ru-RU");
             sb.Append($"{Util.FormatUserName(birthday.User, false)} — {localDateString}\n");
         });
-        await client.SendTextMessageAsync(
+        await client.SendMessage(
             chatId: message.Chat.Id,
             text: sb.ToString(),
             cancellationToken: cancelToken,

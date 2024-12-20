@@ -32,7 +32,7 @@ public class GeminiHandler(IServiceScopeFactory scopeFactory) : Handler
         var chatId = update.Message.Chat.Id;
         try
         {
-            client.SendChatActionAsync(
+            client.SendChatAction(
                 chatId: chatId,
                 action: ChatAction.Typing,
                 cancellationToken: cancelToken
@@ -47,7 +47,7 @@ public class GeminiHandler(IServiceScopeFactory scopeFactory) : Handler
             LogHistoryMessages(formattedMessage, messageContent, update.Message.Chat.Id, mode);
             LogAnalytics(chatId, photo is null ? "gemini-pro" : "gemini-pro-vision", "Google API", mode);
             
-            await client.SendTextMessageAsync(
+            await client.SendMessage(
                 chatId: chatId,
                 text: messageContent,
                 cancellationToken: cancelToken,
@@ -59,7 +59,7 @@ public class GeminiHandler(IServiceScopeFactory scopeFactory) : Handler
         {
             Log.Error(ex, $"Can't use Gemini API");
             Log.Error(ex.Message);
-            await client.SendTextMessageAsync(
+            await client.SendMessage(
                 chatId: chatId,
                 text: "Не могу придумать ответ. Напиши ещё раз",
                 cancellationToken: cancelToken,
