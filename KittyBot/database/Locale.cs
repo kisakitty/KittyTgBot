@@ -2,5 +2,6 @@ namespace KittyBot.database;
 
 public enum Locale
 {
-    EN, RU
+    EN,
+    RU
 }

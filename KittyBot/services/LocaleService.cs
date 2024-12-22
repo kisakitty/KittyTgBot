@@ -2,31 +2,24 @@ using KittyBot.database;
 
 namespace KittyBot.services;
 
-public class LocaleService
+public class LocaleService(KittyBotContext db) : BaseService(db)
 {
-    private readonly KittyBotContext _db;
-
-    public LocaleService(KittyBotContext db)
-    {
-        _db = db;
-    }
-    
     public Locale GetLocale(long chatId)
     {
         var locale =
-            (from chatLocale in _db.ChatsLanguages 
+            (from chatLocale in Db.ChatsLanguages
                 where chatLocale.ChatId == chatId
                 select chatLocale).FirstOrDefault()?.Language;
-        
+
         return locale ?? Locale.EN;
     }
 
     public void SetLanguage(long chatId, Locale language)
     {
-        _db.ChatsLanguages
-            .Where(chat => chat.ChatId  == chatId)
+        Db.ChatsLanguages
+            .Where(chat => chat.ChatId == chatId)
             .ToList()
             .ForEach(chat => chat.Language = language);
-        _db.SaveChanges();
+        Db.SaveChanges();
     }
 }

@@ -6,5 +6,6 @@ namespace KittyBot.handlers;
 
 public abstract class Handler
 {
-    public abstract Task HandleUpdate(ITelegramBotClient client, Update update, CancellationToken cancelToken, Locale language = Locale.RU);
+    public abstract Task HandleUpdate(ITelegramBotClient client, Update update, CancellationToken cancelToken,
+        Locale language = Locale.RU);
 }

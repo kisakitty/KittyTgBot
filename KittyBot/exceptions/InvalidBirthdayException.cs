@@ -1,6 +1,5 @@
 namespace KittyBot;
 
-public class InvalidBirthdayException: Exception
+public class InvalidBirthdayException : Exception
 {
-    
 }

@@ -7,26 +7,20 @@ using Telegram.Bot.Types.Enums;
 
 namespace KittyBot.handlers.commands;
 
-public class ClearContextCommand: Command
+public class ClearContextCommand(IServiceScopeFactory scopeFactory) : Command
 {
-    private readonly IServiceScopeFactory _scopeFactory;
-
-    public ClearContextCommand(IServiceScopeFactory scopeFactory)
+    protected override async Task HandleCommand(ITelegramBotClient client, Message message,
+        CancellationToken cancelToken)
     {
-        _scopeFactory = scopeFactory;
-    }
-    
-    protected override async Task HandleCommand(ITelegramBotClient client, Message message, CancellationToken cancelToken)
-    {
-        var scope = _scopeFactory.CreateScope();
+        var scope = scopeFactory.CreateScope();
         var messageService = scope.ServiceProvider.GetRequiredService<MessageService>();
         var chatId = message.Chat.Id;
         var responseConfigService = scope.ServiceProvider.GetRequiredService<ResponseConfigService>();
         var currentMode = responseConfigService.GetChatMode(chatId);
         messageService.ClearChatMessages(chatId, currentMode);
         await client.SendMessage(
-            chatId: message.Chat.Id,
-            text: $"История общения со мной очищена \\(в рамках режима *{Localizer.GetValue(currentMode.ToString(), Locale.RU)}*\\) 👌",
+            message.Chat.Id,
+            $"История общения со мной очищена \\(в рамках режима *{Localizer.GetValue(currentMode.ToString(), Locale.RU)}*\\) 👌",
             cancellationToken: cancelToken,
             parseMode: ParseMode.MarkdownV2,
             linkPreviewOptions: new LinkPreviewOptions { IsDisabled = true },

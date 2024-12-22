@@ -3,7 +3,9 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using KittyBot.database;
 using KittyBot.dto;
+using KittyBot.dto.gpt4free;
 using KittyBot.services;
+using KittyBot.utility;
 using Microsoft.Extensions.DependencyInjection;
 using OpenAI;
 using Serilog;
@@ -12,41 +14,40 @@ using Telegram.Bot.Types;
 
 namespace KittyBot.handlers;
 
-internal record ModelTimeout(string Model, string?  Provider, TimeSpan Timeout);
+internal record ModelTimeout(string Model, string? Provider, TimeSpan Timeout);
 
-public class Gpt4FreeHandler: OpenAiHandler
+public class Gpt4FreeHandler(IServiceScopeFactory scopeFactory, OpenAIClient openAiClient)
+    : OpenAiHandler(scopeFactory,
+        openAiClient)
 
 {
     private const string Gpt4FreeEndpointEnv = "GPT_4_FREE_ENDPOINT";
-    
-    private readonly string _endpoint;
-    
+
     private static readonly List<ModelTimeout> Models = new()
     {
         new ModelTimeout("gpt-3.5-turbo", "OpenaiChat", new TimeSpan(0, 0, 30))
     };
-    
-    private readonly IServiceScopeFactory _scopeFactory;
 
-    public Gpt4FreeHandler(IServiceScopeFactory scopeFactory, OpenAIClient openAiClient) : base(scopeFactory, openAiClient)
-    {
-        _endpoint = Environment.GetEnvironmentVariable(Gpt4FreeEndpointEnv) ??
-                    throw new EnvVariablesException($"Expect GPT4Free endpoint. Set it to environment variable {Gpt4FreeEndpointEnv}");
-        _scopeFactory = scopeFactory;
-    }
+    private readonly string _endpoint = Environment.GetEnvironmentVariable(Gpt4FreeEndpointEnv) ??
+                                        throw new EnvVariablesException(
+                                            $"Expect GPT4Free endpoint. Set it to environment variable {Gpt4FreeEndpointEnv}");
 
-    public override async Task HandleUpdate(ITelegramBotClient client, Update update, CancellationToken cancelToken, Locale language = Locale.RU)
+    private readonly IServiceScopeFactory _scopeFactory = scopeFactory;
+
+    public override async Task HandleUpdate(ITelegramBotClient client, Update update, CancellationToken cancelToken,
+        Locale language = Locale.RU)
     {
         await TryGenerateFreeResponse(client, update, null, cancelToken);
     }
 
-    public async Task TryGenerateFreeResponse(ITelegramBotClient client, Update update, long? myId, CancellationToken cancelToken)
+    public async Task TryGenerateFreeResponse(ITelegramBotClient client, Update update, long? myId,
+        CancellationToken cancelToken)
     {
         if (update.Message?.Text == null) return;
 
         var formattedMessage = Util.FormatMessage(update.Message, myId);
         Log.Debug($"Formatted message: {formattedMessage}");
-        
+
         var messages = new List<GPT4FreeMessage>
             {
                 new("system",
@@ -60,7 +61,8 @@ public class Gpt4FreeHandler: OpenAiHandler
         var messageContent = response?.choices[0].message.content;
         while (string.IsNullOrEmpty(messageContent) && modelIndex < Models.Count - 1)
         {
-            Log.Warning($"Model {Models[modelIndex].Model} doesn't work. Trying the next model: {Models[modelIndex + 1].Model}");
+            Log.Warning(
+                $"Model {Models[modelIndex].Model} doesn't work. Trying the next model: {Models[modelIndex + 1].Model}");
             ++modelIndex;
             response = await GetResponse(cancelToken, Models[modelIndex], messages, response);
         }
@@ -68,31 +70,32 @@ public class Gpt4FreeHandler: OpenAiHandler
         if (string.IsNullOrEmpty(messageContent))
         {
             Log.Error("Can't use GPT4FREE :(");
-            await GenerateResponse(client, update, cancelToken, myId);
+            await GenerateResponse(client, update, myId, cancelToken);
             return;
         }
+
         Log.Information($"choices: {response?.choices.Count}");
         foreach (var gpt4FreeChoice in response!.choices)
-        {
             Log.Information($"choice[{gpt4FreeChoice.index}]: {gpt4FreeChoice.message}");
-        }
 
         var chatId = update.Message.Chat.Id;
         LogHistoryMessages(formattedMessage, messageContent, update.Message.Chat.Id);
         if (response is { model: not null, provider: not null })
         {
             using var responseConfigServiceScope = _scopeFactory.CreateScope();
-            var responseConfigService = responseConfigServiceScope.ServiceProvider.GetRequiredService<ResponseConfigService>();
+            var responseConfigService =
+                responseConfigServiceScope.ServiceProvider.GetRequiredService<ResponseConfigService>();
             var mode = responseConfigService.GetChatMode(chatId);
             LogAnalytics(chatId, response.model, response.provider, mode);
         }
+
         try
         {
             await client.SendMessage(
-                chatId: chatId,
-                text: messageContent,
+                chatId,
+                messageContent,
                 cancellationToken: cancelToken,
-                linkPreviewOptions: new LinkPreviewOptions { IsDisabled = true},
+                linkPreviewOptions: new LinkPreviewOptions { IsDisabled = true },
                 replyParameters: new ReplyParameters { ChatId = chatId, MessageId = update.Message.MessageId }
             );
         }
@@ -102,7 +105,8 @@ public class Gpt4FreeHandler: OpenAiHandler
         }
     }
 
-    private async Task<GPT4FreeResponse?> GetResponse(CancellationToken cancelToken, ModelTimeout model, List<GPT4FreeMessage> messages,
+    private async Task<GPT4FreeResponse?> GetResponse(CancellationToken cancelToken, ModelTimeout model,
+        List<GPT4FreeMessage> messages,
         GPT4FreeResponse? response)
     {
         try
@@ -114,7 +118,7 @@ public class Gpt4FreeHandler: OpenAiHandler
                 Timeout = model.Timeout
             };
             var httpResponse =
-                await botClient.PostAsJsonAsync("/v1/chat/completions", chatRequest, cancellationToken: cancelToken);
+                await botClient.PostAsJsonAsync("/v1/chat/completions", chatRequest, cancelToken);
             if (httpResponse.StatusCode == HttpStatusCode.OK)
             {
                 var jsonContent = await httpResponse.Content.ReadAsStringAsync(cancelToken);
@@ -138,7 +142,7 @@ public class Gpt4FreeHandler: OpenAiHandler
         var messageService = messageServiceScope.ServiceProvider.GetRequiredService<MessageService>();
         return messageService.GetPreviousMessagesGpt4Free(chatId, 25);
     }
-    
+
     private void LogHistoryMessages(string userMessage, string botResponse, long chatId)
     {
         using var messageServiceScope = _scopeFactory.CreateScope();

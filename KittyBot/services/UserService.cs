@@ -1,39 +1,31 @@
-namespace KittyBot.database;
+using KittyBot.database;
 
-public class UserService
+namespace KittyBot.services;
+
+public class UserService(KittyBotContext db) : BaseService(db)
 {
-    private readonly KittyBotContext _db;
-
-    public UserService(KittyBotContext db)
-    {
-        _db = db;
-    }
-
     public bool IsAdmin(long telegramId)
     {
-        return (from user in _db.Users where user.IsAdmin && user.UserId == telegramId select user)
+        return (from user in Db.Users where user.IsAdmin && user.UserId == telegramId select user)
             .FirstOrDefault() is not null;
     }
 
     public void InitAdmins(IEnumerable<long> adminsIds)
     {
-        var currentAdminsIds = (from user in _db.Users where user.IsAdmin select user.UserId).ToHashSet();
+        var currentAdminsIds = (from user in Db.Users where user.IsAdmin select user.UserId).ToHashSet();
         var updatedAdminIds = adminsIds.ToHashSet();
         var added = updatedAdminIds.Except(currentAdminsIds);
-        foreach (long tgId in added)
-        {
-            CreateOrUpdateAdmin(_db, tgId);
-        }
+        foreach (var tgId in added) CreateOrUpdateAdmin(Db, tgId);
 
-        _db.SaveChanges();
+        Db.SaveChanges();
     }
 
     public void CreateOrUpdateUser(long telegramId, string? username, string firstName, string? lastName)
     {
-        var updatedUser = (from user in _db.Users where user.UserId == telegramId select user).FirstOrDefault();
+        var updatedUser = (from user in Db.Users where user.UserId == telegramId select user).FirstOrDefault();
         if (updatedUser is null)
         {
-            _db.Users.Add(new User
+            Db.Users.Add(new User
                 { UserId = telegramId, Username = username, FirstName = firstName, LastName = lastName });
         }
         else
@@ -43,19 +35,15 @@ public class UserService
             updatedUser.LastName = lastName;
         }
 
-        _db.SaveChanges();
+        Db.SaveChanges();
     }
 
     private static void CreateOrUpdateAdmin(KittyBotContext db, long tgId)
     {
         var newAdmin = (from user in db.Users where user.UserId == tgId select user).FirstOrDefault();
         if (newAdmin is not null)
-        {
             newAdmin.IsAdmin = true;
-        }
         else
-        {
             db.Users.Add(new User { UserId = tgId, IsAdmin = true, FirstName = "" });
-        }
     }
 }

@@ -9,18 +9,12 @@ using Telegram.Bot.Types;
 
 namespace KittyBot.handlers.commands;
 
-public class GetStatsChartCommand: Command
+public class GetStatsChartCommand(IServiceScopeFactory scopeFactory) : Command
 {
-    private readonly IServiceScopeFactory _scopeFactory;
-
     private const int MinCountMessages = 100;
-    
-    public GetStatsChartCommand(IServiceScopeFactory scopeFactory)
-    {
-        _scopeFactory = scopeFactory;
-    }
-    
-    protected override async Task HandleCommand(ITelegramBotClient client, Message message, CancellationToken cancelToken)
+
+    protected override async Task HandleCommand(ITelegramBotClient client, Message message,
+        CancellationToken cancelToken)
     {
         var chatId = message.Chat.Id;
         var pngExporter = new PngExporter
@@ -32,31 +26,32 @@ public class GetStatsChartCommand: Command
         var model = BuildPieModel(chatId);
         pngExporter.Export(model, stream);
         await client.SendPhoto(
-            chatId: chatId,
-            photo: InputFile.FromStream(new MemoryStream(stream.ToArray())),
+            chatId,
+            InputFile.FromStream(new MemoryStream(stream.ToArray())),
             replyParameters: new ReplyParameters { ChatId = message.Chat.Id, MessageId = message.MessageId },
             cancellationToken: cancelToken);
     }
-    
+
     private IPlotModel BuildPieModel(long chatId)
     {
-        using var statsServiceScope = _scopeFactory.CreateScope();
+        using var statsServiceScope = scopeFactory.CreateScope();
         var statsService = statsServiceScope.ServiceProvider.GetRequiredService<StatsService>();
 
         var stats = statsService
-            .GetGlobalStatsLinks(chatId, true).Where(statsItem => statsItem.Value > MinCountMessages)
+            .GetGlobalStatsLinks(chatId, true, false).Where(statsItem => statsItem.Value > MinCountMessages)
             .ToList();
-        var barItems = stats.Select((statsItem, index) => new BarItem { Value = statsItem.Value, CategoryIndex = index, Color = RandomColor() });
-        var model = new PlotModel { Title = "Статистика сообщений", TitleFontSize = 36};
+        var barItems = stats.Select((statsItem, index) => new BarItem
+            { Value = statsItem.Value, CategoryIndex = index, Color = RandomColor() });
+        var model = new PlotModel { Title = "Статистика сообщений", TitleFontSize = 36 };
         var barSeries = new BarSeries
         {
             ItemsSource = barItems,
             LabelPlacement = LabelPlacement.Base,
             LabelFormatString = "{0}",
-            FontSize = 24,
+            FontSize = 24
         };
         model.Series.Add(barSeries);
-        
+
         model.Axes.Add(new CategoryAxis
         {
             Position = AxisPosition.Left,
@@ -65,10 +60,10 @@ public class GetStatsChartCommand: Command
             ItemsSource = stats.Select(statsItem => statsItem.Key),
             FontSize = 24
         });
-        
+
         return model;
     }
-    
+
     private static OxyColor RandomColor()
     {
         var r = new Random();

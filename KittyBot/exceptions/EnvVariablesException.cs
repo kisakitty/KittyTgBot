@@ -1,7 +1,8 @@
 namespace KittyBot;
 
-public class EnvVariablesException: ApplicationException
+public class EnvVariablesException : ApplicationException
 {
-    public EnvVariablesException(string message): base(message)
-    {}
+    public EnvVariablesException(string message) : base(message)
+    {
+    }
 }

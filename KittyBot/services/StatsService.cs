@@ -1,40 +1,35 @@
 using KittyBot.database;
+using KittyBot.utility;
 using Microsoft.EntityFrameworkCore;
+using User = Telegram.Bot.Types.User;
 
 namespace KittyBot.services;
 
-public class StatsService
+public class StatsService(KittyBotContext db) : BaseService(db)
 {
-    private readonly KittyBotContext _db;
-
-    public StatsService(KittyBotContext db)
-    {
-        _db = db;
-    }
-
-    public void LogStats(Telegram.Bot.Types.User tgUser, long chatId, long messageId)
+    public void LogStats(User tgUser, long chatId, long messageId)
     {
         CountMessage(tgUser, chatId);
         RememberAuthor(tgUser, chatId, messageId);
     }
 
-    public User? GetMessageAuthor(long chatId, long messageId)
+    public database.User? GetMessageAuthor(long chatId, long messageId)
     {
-        return (from m in _db.CachedMessages
+        return (from m in Db.CachedMessages
             where m.ChatId == chatId && m.MessageId == messageId
             select m.Author).FirstOrDefault();
     }
 
-    private void RememberAuthor(Telegram.Bot.Types.User tgUser, long chatId, long messageId)
+    private void RememberAuthor(User tgUser, long chatId, long messageId)
     {
         var user = GetOrCreateDbUser(tgUser);
-        _db.CachedMessages.Add(new ChatMessage { Author = user, ChatId = chatId, MessageId = messageId});
-        _db.SaveChanges();
+        Db.CachedMessages.Add(new ChatMessage { Author = user, ChatId = chatId, MessageId = messageId });
+        Db.SaveChanges();
     }
 
-    private void CountMessage(Telegram.Bot.Types.User tgUser, long chatId)
+    private void CountMessage(User tgUser, long chatId)
     {
-        var stats = (from s in _db.Stats 
+        var stats = (from s in Db.Stats
                 where s.User.UserId == tgUser.Id && s.ChatId == chatId
                 select s)
             .FirstOrDefault();
@@ -43,73 +38,60 @@ public class StatsService
         {
             var user = GetOrCreateDbUser(tgUser);
 
-            _db.Stats.Add(new Stats { ChatId = chatId, User = user, CountMessages = 1, IsActive = true });
+            Db.Stats.Add(new Stats { ChatId = chatId, User = user, CountMessages = 1, IsActive = true });
         }
         else
         {
             stats.CountMessages += 1;
         }
 
-        _db.SaveChanges();
+        Db.SaveChanges();
     }
 
-    public void ActivateUser(Telegram.Bot.Types.User tgUser, long chatId)
+    public void ActivateUser(User tgUser, long chatId)
     {
         SetUserStatus(tgUser, chatId, true);
     }
 
-    public void DeactivateUser(Telegram.Bot.Types.User tgUser, long chatId)
+    public void DeactivateUser(User tgUser, long chatId)
     {
         SetUserStatus(tgUser, chatId, false);
     }
 
-    private void SetUserStatus(Telegram.Bot.Types.User tgUser, long chatId, bool isActive)
+    private void SetUserStatus(User tgUser, long chatId, bool isActive)
     {
-        var stats = (from s in _db.Stats 
+        var stats = (from s in Db.Stats
                 where s.User.UserId == tgUser.Id && s.ChatId == chatId
                 select s)
             .FirstOrDefault();
         if (stats == null)
         {
             var user = GetOrCreateDbUser(tgUser);
-            _db.Stats.Add(new Stats { ChatId = chatId, User = user, CountMessages = 0, IsActive = isActive });
+            Db.Stats.Add(new Stats { ChatId = chatId, User = user, CountMessages = 0, IsActive = isActive });
         }
         else
         {
             stats.IsActive = isActive;
         }
 
-        _db.SaveChanges();
+        Db.SaveChanges();
     }
 
-    // TODO duplication
-    private User GetOrCreateDbUser(Telegram.Bot.Types.User tgUser)
+    public List<KeyValuePair<string, long>> GetGlobalStatsLinks(long chatId, bool mention, bool userIdLink)
     {
-        var user = (from u in _db.Users where u.UserId == tgUser.Id select u).FirstOrDefault();
-        if (user is null)
-        {
-            user = _db.Users.Add(new User
-                { UserId = tgUser.Id, Username = tgUser.Username, FirstName = tgUser.FirstName, LastName = tgUser.LastName }).Entity;
-        }
-
-        return user;
-    }
-
-    public List<KeyValuePair<string, long>> GetGlobalStatsLinks(long chatId, bool mention)
-    {
-        var stats = from s in _db.Stats
-                orderby s.CountMessages descending 
-                where s.ChatId == chatId
-                select s;
+        var stats = from s in Db.Stats
+            orderby s.CountMessages descending
+            where s.ChatId == chatId
+            select s;
         return stats
             .Include(s => s.User)
-            .Select(s => KeyValuePair.Create(Util.FormatUserName(s.User, mention), s.CountMessages))
+            .Select(s => KeyValuePair.Create(Util.FormatUserName(s.User, mention, userIdLink), s.CountMessages))
             .ToList();
     }
 
     public List<long> GetUserChats(long userId)
     {
-        var chats = from s in _db.Stats where s.User.Id == userId && s.ChatId < 0 && s.IsActive select s.ChatId;
+        var chats = from s in Db.Stats where s.User.Id == userId && s.ChatId < 0 && s.IsActive select s.ChatId;
         return chats.ToList();
     }
 }

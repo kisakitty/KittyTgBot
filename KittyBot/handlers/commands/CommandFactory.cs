@@ -4,32 +4,21 @@ namespace KittyBot.handlers.commands;
 
 public class CommandFactory
 {
-    private readonly Dictionary<string, Command> _userCommands;
-    private readonly Dictionary<string, Command> _adminCommands;
+    private readonly Dictionary<string, Command> _adminCommands = new();
 
-    private readonly Command _defaultCommand;
-    
-    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly Command _defaultCommand = new UnknownCommand();
 
-    public CommandFactory(IServiceScopeFactory scopeFactory)
+    private readonly Dictionary<string, Command> _userCommands = new()
     {
-        _scopeFactory = scopeFactory;
-        _userCommands = new Dictionary<string, Command>
-        {
-            { "/start", new StartCommand() },
-            { "/help", new HelpCommand() },
-            { "/cat", new CatCommand() },
-        };
-        _adminCommands = new Dictionary<string, Command>();
-        _defaultCommand = new UnknownCommand();
-    }
+        { "/start", new StartCommand() },
+        { "/help", new HelpCommand() },
+        { "/cat", new CatCommand() }
+    };
 
     public Command? GetUserCommandByName(string commandName, IServiceScope scope, string? botname)
     {
         if (botname is not null && commandName.EndsWith($"@{botname}"))
-        {
             commandName = commandName.Remove(commandName.Length - botname.Length - 1);
-        }
         switch (commandName)
         {
             case "/stats": return scope.ServiceProvider.GetRequiredService<GetStatsCommand>();
@@ -45,15 +34,14 @@ public class CommandFactory
             case "/setmode": return scope.ServiceProvider.GetRequiredService<SetModeCommand>();
             case "/reacts": return scope.ServiceProvider.GetRequiredService<GetReactionsStatisticsCommand>();
         }
+
         return _userCommands.GetValueOrDefault(commandName, _defaultCommand);
     }
 
     private Command? GetAdminCommandByName(string commandName, IServiceScope scope, string? botname)
     {
         if (botname is not null && commandName.EndsWith($"@{botname}"))
-        {
             commandName = commandName.Remove(commandName.Length - botname.Length - 1);
-        }
         return commandName switch
         {
             "/setbd" => scope.ServiceProvider.GetRequiredService<ForceSetBirthdayCommand>(),

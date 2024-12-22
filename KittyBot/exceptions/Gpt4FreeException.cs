@@ -1,6 +1,5 @@
 namespace KittyBot;
 
-public class Gpt4FreeException: Exception
+public class Gpt4FreeException : Exception
 {
-    
 }

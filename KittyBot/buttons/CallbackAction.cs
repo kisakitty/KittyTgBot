@@ -1,9 +1,9 @@
 using Telegram.Bot;
 using Telegram.Bot.Types;
 
-namespace KittyBot.callbacks;
+namespace KittyBot.buttons;
 
-public interface CallbackAction
+public interface ICallbackAction
 {
     public void Handle(ITelegramBotClient client, CallbackQuery callback, CancellationToken cancelToken);
 }

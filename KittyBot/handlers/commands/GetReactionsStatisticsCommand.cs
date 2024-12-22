@@ -1,22 +1,17 @@
 using System.Text;
 using KittyBot.services;
+using KittyBot.utility;
 using Microsoft.Extensions.DependencyInjection;
 using Telegram.Bot;
+using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 
 namespace KittyBot.handlers.commands;
 
-public class GetReactionsStatisticsCommand : Command
+public class GetReactionsStatisticsCommand(IServiceScopeFactory scopeFactory) : Command
 {
     private const int MaxChunkSize = 4096;
-
-    private readonly IServiceScopeFactory _scopeFactory;
-
-    public GetReactionsStatisticsCommand(IServiceScopeFactory scopeFactory)
-    {
-        _scopeFactory = scopeFactory;
-    }
 
     protected override async Task HandleCommand(ITelegramBotClient client, Message message,
         CancellationToken cancelToken)
@@ -40,7 +35,7 @@ public class GetReactionsStatisticsCommand : Command
 
     private List<string> GetChatStatsByUsers(Message message)
     {
-        using var statsServiceScope = _scopeFactory.CreateScope();
+        using var statsServiceScope = scopeFactory.CreateScope();
         var reactionsService = statsServiceScope.ServiceProvider.GetRequiredService<ReactionsService>();
         var chunks = new List<string>();
         var sb = new StringBuilder();
@@ -63,9 +58,10 @@ public class GetReactionsStatisticsCommand : Command
         return chunks;
     }
 
-    private async Task<List<string>> GetUserStatsByChats(ITelegramBotClient client, Message message, CancellationToken cancelToken)
+    private async Task<List<string>> GetUserStatsByChats(ITelegramBotClient client, Message message,
+        CancellationToken cancelToken)
     {
-        using var statsServiceScope = _scopeFactory.CreateScope();
+        using var statsServiceScope = scopeFactory.CreateScope();
         var reactionsService = statsServiceScope.ServiceProvider.GetRequiredService<ReactionsService>();
         var chunks = new List<string>();
         var sb = new StringBuilder();
@@ -74,11 +70,17 @@ public class GetReactionsStatisticsCommand : Command
         var i = 1;
         var tasks = reactionsService.GetUserStatistics(message.Chat.Id).Select(async reacts =>
         {
-            var chat = await client.GetChat(reacts.chatId, cancelToken);
-            var title = chat.Title ?? chat.Username ?? chat.FirstName ?? chat.LastName;
-            var newLine = $"\n{i}\\. {title} — {reacts.total} — {reacts.topEmoji}";
             ++i;
-            return newLine;
+            try
+            {
+                var chat = await client.GetChat(reacts.chatId, cancelToken);
+                var title = Util.EscapeSpecialSymbols(chat.Title ?? chat.Username ?? chat.FirstName ?? chat.LastName);
+                return $"\n{i}\\. {title} — {reacts.total} — {reacts.topEmoji}";
+            }
+            catch (ApiRequestException)
+            {
+                return $"\n{i}\\. unknown — {reacts.total} — {reacts.topEmoji}";
+            }
         });
         foreach (var res in await Task.WhenAll(tasks))
         {
@@ -87,8 +89,10 @@ public class GetReactionsStatisticsCommand : Command
                 chunks.Add(sb.ToString());
                 sb.Length = 0;
             }
+
             sb.Append(res);
         }
+
         chunks.Add(sb.ToString());
         return chunks;
     }
