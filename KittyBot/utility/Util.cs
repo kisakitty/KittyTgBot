@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
+using KittyBot.dto;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using User = KittyBot.database.User;
@@ -17,7 +18,7 @@ public static partial class Util
     private static readonly IList<char> SpecialChars =
         new ReadOnlyCollection<char>(new List<char>
             { '_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!' });
-    
+
     public static bool IsCommand(string text)
     {
         return MyRegex().IsMatch(text);
@@ -72,20 +73,26 @@ public static partial class Util
         return dateTime.ToString("m", culture);
     }
 
-    public static string FormatMessage(Message tgMessage, long? myId)
+    public static async Task<List<MessageContent>> FormatMessageWithReplies(ITelegramBotClient client,
+        Message tgMessage, long? myId, CancellationToken cancelToken)
     {
-        var notMyMessage = myId == null || tgMessage.ReplyToMessage?.From?.Id != myId;
-        var mainText =
-            $"Никнейм: {FormatUserName(tgMessage.From, true)}; Имя: {FormatNames(tgMessage.From)}\nСообщение: [\n{tgMessage.Text ?? tgMessage.Caption}\n]";
-        var replyText = tgMessage.ReplyToMessage?.Text ?? tgMessage.ReplyToMessage?.Caption;
-        if (replyText != null && notMyMessage)
-            return
-                $"{mainText}\n\nПересланное сообщение от {FormatUserName(tgMessage.ReplyToMessage?.From, true)}: [\n{replyText}\n]";
-
-        return mainText;
+        string? mainText = null;
+        var textContent = tgMessage.Text ?? tgMessage.Caption;
+        if (tgMessage.From?.Id != myId && textContent is not null)
+            mainText = tgMessage.From?.Username is not null
+                ? $"Никнейм: {FormatUserName(tgMessage.From, true)}; Имя: {FormatNames(tgMessage.From)}\nСообщение: [\n{textContent}\n]"
+                : $"Имя: {FormatNames(tgMessage.From)}\nСообщение: [\n{textContent}\n]";
+        var photo = await GetPhotoBase64(client, tgMessage, cancelToken);
+        var replies = tgMessage.ReplyToMessage != null
+            ? await FormatMessageWithReplies(client, tgMessage.ReplyToMessage, myId, cancelToken)
+            : null;
+        if (textContent is null && photo is null) return replies ?? [];
+        var thisMessageContent = new MessageContent(mainText, photo);
+        return replies is null ? [thisMessageContent] : replies.Append(thisMessageContent).ToList();
     }
 
-    public static async Task<string?> GetPhotoBase64(ITelegramBotClient client, Message tgMessage,
+
+    private static async Task<string?> GetPhotoBase64(ITelegramBotClient client, Message tgMessage,
         CancellationToken cancelToken)
     {
         if (tgMessage.Photo is null || tgMessage.Photo.Length == 0) return null;

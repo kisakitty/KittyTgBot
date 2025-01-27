@@ -188,9 +188,15 @@ public class KittyBotService : IHostedService
             statsService.LogStats(message.From, message.Chat.Id, message.Id);
         }
 
-        // Only process text messages
         var messageText = message.Text ?? message.Caption;
-        if (messageText == null) return;
+        var replyToAuthor = message.ReplyToMessage?.From?.Username;
+        if (messageText is null)
+        {
+            var triggered = (replyToAuthor is not null && replyToAuthor.Equals(_botName)) || message.Chat.Id > 0;
+            var hasPhoto = message.Photo is not null && message.Photo.Length > 0;
+            if (hasPhoto && triggered) GenerateAiResponse(client, update, scope, "", message, cancelToken);
+            return;
+        }
 
         var reactionHandler = scope.ServiceProvider.GetRequiredService<ReactionHandler>();
         await reactionHandler.HandleUpdate(client, update, cancelToken);
@@ -212,9 +218,20 @@ public class KittyBotService : IHostedService
             return;
         }
 
+        var lowerMessage = messageText.ToLower();
+        if (!lowerMessage.StartsWith("бот ") && !lowerMessage.StartsWith("бот,") && !lowerMessage.StartsWith("бот.") &&
+            !lowerMessage.Equals("бот") && !messageText.StartsWith($"@{_botName}") &&
+            (replyToAuthor == null || !replyToAuthor.Equals(_botName)) &&
+            message.Chat.Id <= 0) return; // chat message
+        GenerateAiResponse(client, update, scope, messageText, message, cancelToken);
+    }
+
+    private void GenerateAiResponse(ITelegramBotClient client, Update update,
+        IServiceScope scope, string messageText, Message message, CancellationToken cancelToken)
+    {
         var responseConfigService = scope.ServiceProvider.GetRequiredService<ResponseConfigService>();
         var config = responseConfigService.GetResponseConfig(update.Message.Chat.Id);
-        if (config.ChatBot) ChatAiResponse(client, update, messageText, message, cancelToken);
+        if (config.ChatBot) ChatAiResponse(client, update, message, cancelToken);
     }
 
     private void HandleUserStats(ITelegramBotClient client, Update update, CancellationToken cancelToken)
@@ -235,15 +252,9 @@ public class KittyBotService : IHostedService
             statsService.DeactivateUser(update.Message.LeftChatMember, update.Message.Chat.Id);
     }
 
-    private void ChatAiResponse(ITelegramBotClient client, Update update, string messageText,
+    private void ChatAiResponse(ITelegramBotClient client, Update update,
         Message message, CancellationToken cancelToken)
     {
-        var lowerMessage = messageText.ToLower();
-        var replyToAuthor = message.ReplyToMessage?.From?.Username;
-        if (!lowerMessage.StartsWith("бот ") && !lowerMessage.StartsWith("бот,") && !lowerMessage.StartsWith("бот.") &&
-            !lowerMessage.Equals("бот") && !messageText.StartsWith($"@{_botName}") &&
-            (replyToAuthor == null || !replyToAuthor.Equals(_botName)) &&
-            message.Chat.Id <= 0) return; // personal messages
         using var scope = _scopeFactory.CreateScope();
         var geminiHandler = scope.ServiceProvider.GetRequiredService<GeminiHandler>();
         geminiHandler.GenerateResponse(client, update, _myId, cancelToken);

@@ -1,4 +1,5 @@
 using KittyBot.database;
+using KittyBot.dto;
 using KittyBot.services;
 using KittyBot.utility;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,15 +29,15 @@ public class OpenAiHandler(IServiceScopeFactory scopeFactory, OpenAIClient openA
         if (update.Message?.Text == null) return;
 
 
-        var formattedMessage = Util.FormatMessage(update.Message, myId);
-        Log.Debug($"Formatted message: {formattedMessage}");
+        var formattedMessages = await Util.FormatMessageWithReplies(client, update.Message, myId, cancelToken);
+        Log.Debug($"Formatted message: {formattedMessages}");
 
         var messages = new List<Message>
             {
                 new(Role.System,
                     "Ты интерактивный помощник в небольшом чатике. Тебя зовут Хелло Китти! Твои ответы должны быть максимально понятными, простыми и лаконичными. Придерживайся неформального и молодёжного стиля в общении, используй сленг и маты")
             }.Concat(GetHistory(update.Message.Chat.Id))
-            .Append(new Message(Role.User, formattedMessage));
+            .Concat(formattedMessages.Select(msg => new Message(Role.User, msg.text)));
 
         Log.Information($"Request to OpenAI from {update.Message.From?.Username}");
         var chatRequest = new ChatRequest(messages, Model.GPT3_5_Turbo);
@@ -45,10 +46,9 @@ public class OpenAiHandler(IServiceScopeFactory scopeFactory, OpenAIClient openA
 
         var chatId = update.Message.Chat.Id;
         string answer = choice.Message.Content.ToString();
-        LogHistoryMessages(formattedMessage, answer, update.Message.Chat.Id);
+        LogHistoryMessages(formattedMessages, answer, update.Message.Chat.Id);
         using var responseConfigServiceScope = scopeFactory.CreateScope();
-        var responseConfigService =
-            responseConfigServiceScope.ServiceProvider.GetRequiredService<ResponseConfigService>();
+        var responseConfigService = responseConfigServiceScope.ServiceProvider.GetRequiredService<ResponseConfigService>();
         var mode = responseConfigService.GetChatMode(chatId);
         LogAnalytics(chatId, "gpt-3.5-turbo", "OpenAI API", mode);
         await client.SendMessage(
@@ -74,11 +74,16 @@ public class OpenAiHandler(IServiceScopeFactory scopeFactory, OpenAIClient openA
         return messageService.GetPreviousMessages(ChatId, 25);
     }
 
-    private void LogHistoryMessages(string userMessage, string botResponse, long chatId)
+    private void LogHistoryMessages(List<MessageContent> userMessages, string botResponse, long chatId)
     {
         using var messageServiceScope = scopeFactory.CreateScope();
         var messageService = messageServiceScope.ServiceProvider.GetRequiredService<MessageService>();
-        messageService.LogMessage(new HistoricalMessage { Content = userMessage, ChatId = chatId, IsBot = false });
+        userMessages.ForEach(msg =>
+        {
+            if (msg.text != null)
+                messageService.LogMessage(new HistoricalMessage
+                    { Content = msg.text, ChatId = chatId, IsBot = false });
+        });     
         messageService.LogMessage(new HistoricalMessage { Content = botResponse, ChatId = chatId, IsBot = true });
     }
 }

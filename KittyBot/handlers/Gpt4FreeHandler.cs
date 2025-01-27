@@ -45,15 +45,15 @@ public class Gpt4FreeHandler(IServiceScopeFactory scopeFactory, OpenAIClient ope
     {
         if (update.Message?.Text == null) return;
 
-        var formattedMessage = Util.FormatMessage(update.Message, myId);
-        Log.Debug($"Formatted message: {formattedMessage}");
+        var formattedMessages = await Util.FormatMessageWithReplies(client, update.Message, myId, cancelToken);
+        Log.Debug($"Formatted message: {formattedMessages}");
 
         var messages = new List<GPT4FreeMessage>
             {
                 new("system",
                     "Ты интерактивный помощник в небольшом чатике. Тебя зовут Хелло Китти! Твои ответы должны быть максимально понятными, простыми и лаконичными. Придерживайся неформального и молодёжного стиля в общении, используй сленг и маты")
             }.Concat(GetHistory(update.Message.Chat.Id))
-            .Append(new GPT4FreeMessage("user", formattedMessage))
+            .Concat(formattedMessages.Select(msg => new GPT4FreeMessage("user", msg.text)))
             .ToList();
         var modelIndex = 0;
         GPT4FreeResponse? response = null;
@@ -79,7 +79,7 @@ public class Gpt4FreeHandler(IServiceScopeFactory scopeFactory, OpenAIClient ope
             Log.Information($"choice[{gpt4FreeChoice.index}]: {gpt4FreeChoice.message}");
 
         var chatId = update.Message.Chat.Id;
-        LogHistoryMessages(formattedMessage, messageContent, update.Message.Chat.Id);
+        LogHistoryMessages(formattedMessages, messageContent, update.Message.Chat.Id);
         if (response is { model: not null, provider: not null })
         {
             using var responseConfigServiceScope = _scopeFactory.CreateScope();
@@ -143,11 +143,16 @@ public class Gpt4FreeHandler(IServiceScopeFactory scopeFactory, OpenAIClient ope
         return messageService.GetPreviousMessagesGpt4Free(chatId, 25);
     }
 
-    private void LogHistoryMessages(string userMessage, string botResponse, long chatId)
+    private void LogHistoryMessages(List<MessageContent> userMessages, string botResponse, long chatId)
     {
         using var messageServiceScope = _scopeFactory.CreateScope();
         var messageService = messageServiceScope.ServiceProvider.GetRequiredService<MessageService>();
-        messageService.LogMessage(new HistoricalMessage { Content = userMessage, ChatId = chatId, IsBot = false });
+        userMessages.ForEach(msg =>
+        {
+            if (msg.text != null)
+                messageService.LogMessage(new HistoricalMessage
+                    { Content = msg.text, ChatId = chatId, IsBot = false });
+        });
         messageService.LogMessage(new HistoricalMessage { Content = botResponse, ChatId = chatId, IsBot = true });
     }
 }
