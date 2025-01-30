@@ -3,6 +3,7 @@ using KittyBot.database;
 using KittyBot.handlers;
 using KittyBot.handlers.commands;
 using KittyBot.services;
+using KittyBot.utility;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -24,23 +25,26 @@ public class KittyBotService : IHostedService
 
     private const string ChatsWhitelistEnv = "CHATS_WHITELIST";
 
+    private readonly List<long>? _allowedChats;
+
+    private readonly UpdateType[] _allowedUpdates =
+        [UpdateType.Message, UpdateType.CallbackQuery, UpdateType.ChatMember, UpdateType.MessageReaction];
+
     private readonly TelegramBotClient _botClient;
 
     private readonly IServiceScopeFactory _scopeFactory;
 
-    private readonly List<long>? _allowedChats;
+    private string? _botName;
+
+    private HelloHandler? _helloHandler;
 
     private long? _myId;
 
-    private string? _botname;
-    
-    private HelloHandler _helloHandler;
-
     public KittyBotService(IServiceScopeFactory scopeFactory, TelegramBotClient client)
     {
-        string? chatsWhitelist = Environment.GetEnvironmentVariable(ChatsWhitelistEnv);
+        var chatsWhitelist = Environment.GetEnvironmentVariable(ChatsWhitelistEnv);
         Log.Information($"Allowed chats: {chatsWhitelist ?? "All"}");
-        _allowedChats = chatsWhitelist != null ? chatsWhitelist.Split(",").Select(long.Parse).ToList() : null;
+        _allowedChats = chatsWhitelist?.Split(",").Select(long.Parse).ToList();
 
         _scopeFactory = scopeFactory;
         using (var scope = scopeFactory.CreateScope())
@@ -48,32 +52,27 @@ public class KittyBotService : IHostedService
             var kittyBotDbContext = scope.ServiceProvider.GetRequiredService<KittyBotContext>();
             kittyBotDbContext.Database.Migrate();
             var userService = scope.ServiceProvider.GetRequiredService<UserService>();
-            string? adminIdList = Environment.GetEnvironmentVariable(AdminsListIdsEnv);
-            if (adminIdList is not null)
-            {
-                userService.InitAdmins(adminIdList.Split(",").Select(long.Parse).ToList());
-            }
+            var adminIdList = Environment.GetEnvironmentVariable(AdminsListIdsEnv);
+            if (adminIdList is not null) userService.InitAdmins(adminIdList.Split(",").Select(long.Parse).ToList());
         }
 
-        string? token = Environment.GetEnvironmentVariable(TelegramEnv);
+        var token = Environment.GetEnvironmentVariable(TelegramEnv);
         if (token == null)
-        {
             throw new EnvVariablesException($"Expect Telegram token. Set it to environment variable {TelegramEnv}");
-        }
 
         _botClient = client;
-        client.GetMeAsync().ContinueWith(Task =>
+        client.GetMe().ContinueWith(task =>
         {
-            if (Task.Exception != null)
+            if (task.Exception != null)
             {
-                Log.Error(Task.Exception, "Unable to get bot's telegram ID");
+                Log.Error(task.Exception, "Unable to get bot's telegram ID");
                 return;
             }
 
-            _myId = Task.Result.Id;
-            _botname = Task.Result.Username;
+            _myId = task.Result.Id;
+            _botName = task.Result.Username;
             Log.Information($"My bot ID: {_myId}");
-            Log.Information($"My username: {_botname}");
+            Log.Information($"My username: {_botName}");
             _helloHandler = new HelloHandler(_myId);
         });
     }
@@ -84,22 +83,22 @@ public class KittyBotService : IHostedService
 
         ReceiverOptions receiverOptions = new()
         {
-            AllowedUpdates = Array.Empty<UpdateType>(),
+            AllowedUpdates = _allowedUpdates,
             DropPendingUpdates = true
         };
 
         _botClient.StartReceiving(
-            updateHandler: HandleUpdateAsync,
-            errorHandler: HandlePollingErrorAsync,
-            receiverOptions: receiverOptions,
-            cancellationToken: cts.Token
+            HandleUpdateAsync,
+            HandlePollingErrorAsync,
+            receiverOptions,
+            cts.Token
         );
 
         return Task.CompletedTask;
 
         Task HandlePollingErrorAsync(ITelegramBotClient client, Exception exception, CancellationToken cancelToken)
         {
-            string errorMessage = exception switch
+            var errorMessage = exception switch
             {
                 ApiRequestException apiRequestException
                     => $"Telegram API Error:\n[{apiRequestException.ErrorCode}]\n{apiRequestException.Message}",
@@ -122,15 +121,56 @@ public class KittyBotService : IHostedService
         }
     }
 
-    private async Task HandleUpdateWithExceptions(ITelegramBotClient client, Update update, CancellationToken cancelToken)
+    public Task StopAsync(CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
+    private void HandleReaction(ITelegramBotClient client, Update update, CancellationToken cancelToken)
+    {
+        if (update.Type != UpdateType.MessageReaction || update.MessageReaction == null) return;
+        var newEmoji = "";
+        var removedEmoji = "";
+        var newReact = update.MessageReaction.NewReaction.Length > 0;
+        var removedReact = update.MessageReaction.OldReaction.Length > 0;
+        if (newReact)
+            newEmoji = update.MessageReaction.NewReaction[0].Type switch
+            {
+                ReactionTypeKind.Emoji => ((ReactionTypeEmoji)update.MessageReaction.NewReaction[0]).Emoji,
+                ReactionTypeKind.CustomEmoji => ((ReactionTypeCustomEmoji)update.MessageReaction.NewReaction[0])
+                    .CustomEmojiId,
+                ReactionTypeKind.Paid => "⭐️",
+                _ => newEmoji
+            };
+        if (removedReact)
+            removedEmoji = update.MessageReaction.OldReaction[0].Type switch
+            {
+                ReactionTypeKind.Emoji => ((ReactionTypeEmoji)update.MessageReaction.OldReaction[0]).Emoji,
+                ReactionTypeKind.CustomEmoji => ((ReactionTypeCustomEmoji)update.MessageReaction.OldReaction[0])
+                    .CustomEmojiId,
+                ReactionTypeKind.Paid => "⭐️",
+                _ => removedEmoji
+            };
+        using var scope = _scopeFactory.CreateScope();
+        var reactionsService = scope.ServiceProvider.GetRequiredService<ReactionsService>();
+        var statsService = scope.ServiceProvider.GetRequiredService<StatsService>();
+        var messageAuthor =
+            statsService.GetMessageAuthor(update.MessageReaction.Chat.Id, update.MessageReaction.MessageId);
+        if (newReact && messageAuthor != null && messageAuthor.UserId != update.MessageReaction.User?.Id)
+            reactionsService.LogReaction(messageAuthor, update.MessageReaction.Chat.Id, newEmoji);
+        if (removedReact && messageAuthor != null && messageAuthor.UserId != update.MessageReaction.User?.Id)
+            reactionsService.RemoveReaction(messageAuthor, update.MessageReaction.Chat.Id, removedEmoji);
+    }
+
+    private async Task HandleUpdateWithExceptions(ITelegramBotClient client, Update update,
+        CancellationToken cancelToken)
     {
         using var scope = _scopeFactory.CreateScope();
         var userService = scope.ServiceProvider.GetRequiredService<UserService>();
-        if (update.Message?.From is not null)
-        {
-            userService.CreateOrUpdateUser(update.Message.From.Id, update.Message.From.Username,
-                update.Message.From.FirstName, update.Message.From.LastName);
-        }
+        var user = update.Message?.From ??
+                   update.MessageReaction?.User ?? update.CallbackQuery?.From ?? update.ChatMember?.From;
+        if (user is not null) userService.CreateOrUpdateUser(user.Id, user.Username, user.FirstName, user.LastName);
+        HandleReaction(client, update, cancelToken);
 
         if (update.CallbackQuery is { } callback)
         {
@@ -138,26 +178,26 @@ public class KittyBotService : IHostedService
             return;
         }
 
-        if (update.Message is not { } message)
-        {
-            return;
-        }
+        if (update.Message is not { } message) return;
 
         HandleUserStats(client, update, cancelToken);
-        
+
         if (message.From != null)
         {
-            var statsService = scope.ServiceProvider.GetRequiredService<StatsSerivce>();
-            statsService.LogStats(message.From, message.Chat.Id);
+            var statsService = scope.ServiceProvider.GetRequiredService<StatsService>();
+            statsService.LogStats(message.From, message.Chat.Id, message.Id);
         }
 
-        // Only process text messages
         var messageText = message.Text ?? message.Caption;
-        if (messageText == null)
+        var replyToAuthor = message.ReplyToMessage?.From?.Username;
+        if (messageText is null)
         {
+            var triggered = (replyToAuthor is not null && replyToAuthor.Equals(_botName)) || message.Chat.Id > 0;
+            var hasPhoto = message.Photo is not null && message.Photo.Length > 0;
+            if (hasPhoto && triggered) GenerateAiResponse(client, update, scope, "", message, cancelToken);
             return;
         }
-        
+
         var reactionHandler = scope.ServiceProvider.GetRequiredService<ReactionHandler>();
         await reactionHandler.HandleUpdate(client, update, cancelToken);
 
@@ -168,62 +208,56 @@ public class KittyBotService : IHostedService
             HandleCommand(messageText, client, update, cancelToken);
             return;
         }
-        
+
         // Chat whitelist
         if (_allowedChats != null && !_allowedChats.Contains(message.Chat.Id))
         {
-            Log.Warning($"Allowed chats: {String.Join(", ", _allowedChats.Select(x => x.ToString()))}");
+            Log.Warning($"Allowed chats: {string.Join(", ", _allowedChats.Select(x => x.ToString()))}");
             Log.Warning(
                 $"Skipped chat: {message.Chat.Id} | Title: {message.Chat.Title}");
             return;
         }
+
+        var lowerMessage = messageText.ToLower();
+        if (!lowerMessage.StartsWith("бот ") && !lowerMessage.StartsWith("бот,") && !lowerMessage.StartsWith("бот.") &&
+            !lowerMessage.Equals("бот") && !messageText.StartsWith($"@{_botName}") &&
+            (replyToAuthor == null || !replyToAuthor.Equals(_botName)) &&
+            message.Chat.Id <= 0) return; // chat message
+        GenerateAiResponse(client, update, scope, messageText, message, cancelToken);
+    }
+
+    private void GenerateAiResponse(ITelegramBotClient client, Update update,
+        IServiceScope scope, string messageText, Message message, CancellationToken cancelToken)
+    {
         var responseConfigService = scope.ServiceProvider.GetRequiredService<ResponseConfigService>();
         var config = responseConfigService.GetResponseConfig(update.Message.Chat.Id);
-        if (config.ChatBot)
-        {
-            ChatAiResponse(client, update, messageText, message, cancelToken);
-        }
+        if (config.ChatBot) ChatAiResponse(client, update, message, cancelToken);
     }
 
     private void HandleUserStats(ITelegramBotClient client, Update update, CancellationToken cancelToken)
     {
         using var scope = _scopeFactory.CreateScope();
-        var statsService = scope.ServiceProvider.GetRequiredService<StatsSerivce>();
+        var statsService = scope.ServiceProvider.GetRequiredService<StatsService>();
         var responseConfigService = scope.ServiceProvider.GetRequiredService<ResponseConfigService>();
         if (update.Message!.Type == MessageType.NewChatMembers)
         {
             foreach (var newMember in update.Message.NewChatMembers ?? [])
-            {
                 statsService.ActivateUser(newMember, update.Message.Chat.Id);
-            }
 
             var config = responseConfigService.GetResponseConfig(update.Message.Chat.Id);
-            if (config.HelloMessage)
-            {
-                _helloHandler.HandleUpdate(client, update, cancelToken);
-            }
+            if (config.HelloMessage) _helloHandler?.HandleUpdate(client, update, cancelToken);
         }
+
         if (update.Message!.Type == MessageType.LeftChatMember && update.Message.LeftChatMember != null)
-        {
             statsService.DeactivateUser(update.Message.LeftChatMember, update.Message.Chat.Id);
-        }
     }
 
-    private void ChatAiResponse(ITelegramBotClient client, Update update, string messageText,
+    private void ChatAiResponse(ITelegramBotClient client, Update update,
         Message message, CancellationToken cancelToken)
     {
-        var lowerMessage = messageText.ToLower();
-        var replyToAuthor = message.ReplyToMessage?.From?.Username;
-        if (lowerMessage.StartsWith("бот ") || lowerMessage.StartsWith("бот,") || lowerMessage.StartsWith("бот.") ||
-            lowerMessage.Equals("бот") || messageText.StartsWith($"@{_botname}") ||
-            (replyToAuthor != null && replyToAuthor.Equals(_botname)) ||
-            message.Chat.Id > 0 // personal messages
-            )
-        {
-            using var scope = _scopeFactory.CreateScope();
-            var geminiHandler = scope.ServiceProvider.GetRequiredService<GeminiHandler>();
-            geminiHandler.GenerateResponse(client, update, _myId, cancelToken);
-        }
+        using var scope = _scopeFactory.CreateScope();
+        var geminiHandler = scope.ServiceProvider.GetRequiredService<GeminiHandler>();
+        geminiHandler.GenerateResponse(client, update, _myId, cancelToken);
     }
 
     private async Task HandleCommand(string command, ITelegramBotClient client, Update update,
@@ -232,24 +266,18 @@ public class KittyBotService : IHostedService
         using var scope = _scopeFactory.CreateScope();
         var factory = scope.ServiceProvider.GetRequiredService<CommandFactory>();
         var userService = scope.ServiceProvider.GetRequiredService<UserService>();
-        string commandName = command.Split()[0];
+        var commandName = command.Split()[0];
         try
         {
             if (update.Message?.From is not null && userService.IsAdmin(update.Message.From.Id))
             {
-                var adminCommand = factory.GetAdminCommand(commandName, scope, _botname);
-                if (adminCommand is not null)
-                {
-                    await adminCommand.HandleUpdate(client, update, cancelToken);
-                }
+                var adminCommand = factory.GetAdminCommand(commandName, scope, _botName);
+                if (adminCommand is not null) await adminCommand.HandleUpdate(client, update, cancelToken);
             }
             else
             {
-                var userCommand = factory.GetUserCommandByName(commandName, scope, _botname);
-                if (userCommand is not null)
-                {
-                    await userCommand.HandleUpdate(client, update, cancelToken);
-                }
+                var userCommand = factory.GetUserCommandByName(commandName, scope, _botName);
+                if (userCommand is not null) await userCommand.HandleUpdate(client, update, cancelToken);
             }
         }
         catch (Exception ex)
@@ -265,11 +293,6 @@ public class KittyBotService : IHostedService
         var callbackFactory = scope.ServiceProvider.GetRequiredService<CallbackActionFactory>();
         var callbackAction = callbackFactory.GetCallbackActionByName(callback.Data);
         callbackAction?.Handle(client, callback, cancelToken);
-        client.MakeRequestAsync(new AnswerCallbackQueryRequest { CallbackQueryId = callback.Id});
-    }
-
-    public Task StopAsync(CancellationToken cancellationToken)
-    {
-        return Task.CompletedTask;
+        client.SendRequest(new AnswerCallbackQueryRequest { CallbackQueryId = callback.Id }, cancelToken);
     }
 }

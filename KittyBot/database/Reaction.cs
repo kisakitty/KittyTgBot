@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace KittyBot.database;
 
-public class Stats
+public class Reaction
 {
     [Key] public int Id { get; set; }
 
@@ -10,7 +10,7 @@ public class Stats
 
     [Required] public User User { get; set; }
 
-    [Required] public long CountMessages { get; set; }
+    [Required] public long Count { get; set; }
 
-    [Required] public bool IsActive { get; set; }
+    [Required] public string Emoji { get; set; }
 }

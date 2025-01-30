@@ -4,7 +4,7 @@ using Telegram.Bot.Types;
 
 namespace KittyBot.handlers;
 
-public class ReactionHandler: Handler
+public class ReactionHandler : Handler
 {
     private static readonly Dictionary<string, string> KeywordsReactionsSubstring = new()
     {
@@ -17,27 +17,26 @@ public class ReactionHandler: Handler
         { "/gayporn", "🍓" }, { "/gayporn@kisakittybot", "🍓" },
         { "черножоп", "🌚" },
         { "вход в пустоту", "❤️‍🔥" }, { "повелитель мух", "❤️‍🔥" }, { "завтрак на плутоне", "❤️‍🔥" },
-        { "укрась прощальное утро цветами обещания", "❤️‍🔥" }, { "девочка покорившая время", "❤️‍🔥" }, 
+        { "укрась прощальное утро цветами обещания", "❤️‍🔥" }, { "девочка покорившая время", "❤️‍🔥" },
         { "девочка, покорившая время", "❤️‍🔥" }, { "джонни взял ружье", "❤️‍🔥" }
     };
 
-    public override async Task HandleUpdate(ITelegramBotClient client, Update update, CancellationToken cancelToken, Locale language = Locale.RU)
+    public override async Task HandleUpdate(ITelegramBotClient client, Update update, CancellationToken cancelToken,
+        Locale language = Locale.RU)
     {
         if (update.Message?.Text == null) return;
-        
-        foreach (var keyValue in KeywordsReactionsSubstring)
+
+        foreach (var keyValue in KeywordsReactionsSubstring.Where(keyValue =>
+                     update.Message.Text.Contains(keyValue.Key, StringComparison.CurrentCultureIgnoreCase)))
         {
-            if (update.Message.Text.ToLower().Contains(keyValue.Key))
-            {
-                await client.SetMessageReactionAsync(
-                    new ChatId(update.Message.Chat.Id),
-                    update.Message.MessageId,
-                    new List<ReactionType> { keyValue.Value },
-                    false,
-                    cancelToken
-                );
-                return;
-            }
+            await client.SetMessageReaction(
+                new ChatId(update.Message.Chat.Id),
+                update.Message.MessageId,
+                new List<ReactionType> { keyValue.Value },
+                false,
+                cancelToken
+            );
+            return;
         }
     }
 }

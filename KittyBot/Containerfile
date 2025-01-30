@@ -5,7 +5,6 @@ WORKDIR /app
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 COPY . ./
-RUN cp ./Container/NuGet.Config "$HOME/.nuget/NuGet/NuGet.Config"
 RUN dotnet restore
 RUN dotnet build "KittyBot.csproj" -c Release -o /app/build
 

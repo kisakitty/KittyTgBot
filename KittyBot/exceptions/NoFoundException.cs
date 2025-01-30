@@ -1,6 +1,5 @@
 namespace KittyBot.exceptions;
 
-public class NoFoundException: Exception
+public class NoFoundException : Exception
 {
-    
 }

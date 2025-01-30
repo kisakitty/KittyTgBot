@@ -3,7 +3,7 @@ using Telegram.Bot.Types;
 
 namespace KittyBot.handlers.commands;
 
-public class UnknownCommand: Command
+public class UnknownCommand : Command
 {
     protected override Task HandleCommand(ITelegramBotClient client, Message message, CancellationToken cancelToken)
     {

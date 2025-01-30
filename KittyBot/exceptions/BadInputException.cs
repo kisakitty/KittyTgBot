@@ -1,6 +1,5 @@
 namespace KittyBot.exceptions;
 
-public class BadInputException: Exception
+public class BadInputException : Exception
 {
-    
 }

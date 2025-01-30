@@ -11,10 +11,8 @@ using Telegram.Bot.Types.Enums;
 
 namespace KittyBot.handlers.commands;
 
-public class GetStatsPieCommand: Command
+public class GetStatsPieCommand(IServiceScopeFactory scopeFactory) : Command
 {
-    private readonly IServiceScopeFactory _scopeFactory;
-
     private const int Max1DResolution = 2500;
     private const int MaxFontSize = 100;
     private const int DefaultWidth = 1920;
@@ -22,12 +20,8 @@ public class GetStatsPieCommand: Command
     private const int DefaultFontSize = 28;
     private const int MinCountMessages = 100;
 
-    public GetStatsPieCommand(IServiceScopeFactory scopeFactory)
-    {
-        _scopeFactory = scopeFactory;
-    }
-    
-    protected override async Task HandleCommand(ITelegramBotClient client, Message message, CancellationToken cancelToken)
+    protected override async Task HandleCommand(ITelegramBotClient client, Message message,
+        CancellationToken cancelToken)
     {
         var chatId = message.Chat.Id;
         var text = message.Text ?? "";
@@ -41,9 +35,7 @@ public class GetStatsPieCommand: Command
             var height = heightString is null ? DefaultHeight : int.Parse(heightString);
             var fontSize = fontSizeString is null ? DefaultFontSize : float.Parse(fontSizeString);
             if (width > Max1DResolution || height > Max1DResolution || fontSize > MaxFontSize)
-            {
                 throw new BadInputException();
-            }
             var pngExporter = new PngExporter
             {
                 Width = width,
@@ -52,44 +44,46 @@ public class GetStatsPieCommand: Command
             var stream = new MemoryStream();
             var model = BuildPlotModel(chatId, fontSize);
             pngExporter.Export(model, stream);
-            await client.SendPhotoAsync(
-                chatId: chatId,
-                photo: InputFile.FromStream(new MemoryStream(stream.ToArray())),
+            await client.SendPhoto(
+                chatId,
+                InputFile.FromStream(new MemoryStream(stream.ToArray())),
                 replyParameters: new ReplyParameters { ChatId = message.Chat.Id, MessageId = message.MessageId },
                 cancellationToken: cancelToken);
         }
         catch (BadInputException)
         {
-            await client.SendTextMessageAsync(
-                chatId: chatId,
-                text: $"Слишком большое разрешение и/или размер шрифта. Попробуй до {Max1DResolution}x{Max1DResolution}. Максимальный шрифт — {MaxFontSize}",
+            await client.SendMessage(
+                chatId,
+                $"Слишком большое разрешение и/или размер шрифта. Попробуй до {Max1DResolution}x{Max1DResolution}. Максимальный шрифт — {MaxFontSize}",
                 replyParameters: new ReplyParameters { ChatId = message.Chat.Id, MessageId = message.MessageId },
                 cancellationToken: cancelToken);
         }
         catch (Exception ex)
         {
             Log.Error(ex, $"Birthday parse error. String: {message.Text}");
-            await client.SendTextMessageAsync(
-                chatId: chatId,
-                text: "Не могу распарсить комманду\\. Пришли в формате `/statschart <width> <height> <fontSize>`\\. \\<width\\>, \\<height\\> и \\<fontSize\\> опциональны \\(разрешение по умолчанию: 1920x1080\\, размер шрифта 28\\)\n\n" +
-                      "" +
-                      $"Также на графике не отображены участники, менее чем со {MinCountMessages} сообщениями",
+            await client.SendMessage(
+                chatId,
+                "Не могу распарсить комманду\\. Пришли в формате `/statschart <width> <height> <fontSize>`\\. \\<width\\>, \\<height\\> и \\<fontSize\\> опциональны \\(разрешение по умолчанию: 1920x1080\\, размер шрифта 28\\)\n\n" +
+                "" +
+                $"Также на графике не отображены участники, менее чем со {MinCountMessages} сообщениями",
                 cancellationToken: cancelToken,
                 replyParameters: new ReplyParameters { ChatId = message.Chat.Id, MessageId = message.MessageId },
                 parseMode: ParseMode.MarkdownV2);
         }
     }
-    
-    
+
+
     private IPlotModel BuildPlotModel(long chatId, float fontSize)
     {
-        using var statsServiceScope = _scopeFactory.CreateScope();
-        var statsService = statsServiceScope.ServiceProvider.GetRequiredService<StatsSerivce>();
+        using var statsServiceScope = scopeFactory.CreateScope();
+        var statsService = statsServiceScope.ServiceProvider.GetRequiredService<StatsService>();
 
-        var stats = statsService.GetGlobalStatsLinks(chatId, true).Where(statsItem => statsItem.Value > MinCountMessages);
-        var slices = stats.Select(statsItem => new PieSlice(statsItem.Key, statsItem.Value) { Fill = RandomColor() } ).ToList();
-        
-        var model = new PlotModel { Title = "Статистика сообщений", TitleFontSize = fontSize * 1.3};
+        var stats = statsService.GetGlobalStatsLinks(chatId, true, false)
+            .Where(statsItem => statsItem.Value > MinCountMessages);
+        var slices = stats.Select(statsItem => new PieSlice(statsItem.Key, statsItem.Value) { Fill = RandomColor() })
+            .ToList();
+
+        var model = new PlotModel { Title = "Статистика сообщений", TitleFontSize = fontSize * 1.3 };
 
         var pieSeries = new PieSeries
         {
@@ -98,10 +92,10 @@ public class GetStatsPieCommand: Command
         };
 
         model.Series.Add(pieSeries);
-        
+
         return model;
     }
-    
+
     private static OxyColor RandomColor()
     {
         var r = new Random();

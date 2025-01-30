@@ -3,6 +3,7 @@ using System;
 using KittyBot.database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace KittyBot.Migrations
 {
     [DbContext(typeof(KittyBotContext))]
-    partial class KittyBotContextModelSnapshot : ModelSnapshot
+    [Migration("20241214000906_reactions")]
+    partial class reactions
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -60,30 +63,6 @@ namespace KittyBot.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("ChatsLanguages");
-                });
-
-            modelBuilder.Entity("KittyBot.database.ChatMessage", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("AuthorId")
-                        .HasColumnType("integer");
-
-                    b.Property<long>("ChatId")
-                        .HasColumnType("bigint");
-
-                    b.Property<long>("MessageId")
-                        .HasColumnType("bigint");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AuthorId");
-
-                    b.ToTable("CachedMessages");
                 });
 
             modelBuilder.Entity("KittyBot.database.Event", b =>
@@ -294,17 +273,6 @@ namespace KittyBot.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("KittyBot.database.ChatMessage", b =>
-                {
-                    b.HasOne("KittyBot.database.User", "Author")
-                        .WithMany()
-                        .HasForeignKey("AuthorId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Author");
                 });
 
             modelBuilder.Entity("KittyBot.database.Reaction", b =>
