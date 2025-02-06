@@ -26,7 +26,7 @@ public class BirthdaysNotifier(IServiceScopeFactory scopeFactory, TelegramBotCli
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        using var timer = new CronTimer("0 0 * * *", TimeZoneInfo.Local);
+        using var timer = new CronTimer("1 0 * * *", TimeZoneInfo.Local);
         Log.Information("Start birthday notifier");
         while (await timer.WaitForNextTickAsync(stoppingToken))
         {

@@ -9,7 +9,7 @@ public class BirthdaysService(KittyBotContext db) : BaseService(db)
 {
     public List<Birthday> GetTodayBirthdays()
     {
-        var now = DateTime.SpecifyKind(DateTime.Now, DateTimeKind.Utc);
+        var now = DateTime.SpecifyKind(DateTime.Now, DateTimeKind.Local);
         var todayBirthdays = (from birthday in Db.Birthdays
                 where birthday.Day == now.Day && birthday.Month == now.Month
                 select birthday)
