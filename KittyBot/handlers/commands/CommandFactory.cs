@@ -45,6 +45,7 @@ public class CommandFactory
         return commandName switch
         {
             "/setbd" => scope.ServiceProvider.GetRequiredService<ForceSetBirthdayCommand>(),
+            "/invalidate" => scope.ServiceProvider.GetRequiredService<DeactivateInactiveChats>(),
             _ => _adminCommands.TryGetValue(commandName, out var resultCommand) ? null : resultCommand
         };
     }

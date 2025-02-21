@@ -64,6 +64,7 @@ public static class Program
                 services.AddScoped<ReverseChatBotCommand>();
                 services.AddScoped<ReactionHandler>();
                 services.AddScoped<RemoveBirthday>();
+                services.AddScoped<DeactivateInactiveChats>();
                 SetTelegramClient(services);
                 SetOpenAiClient(services);
                 services.AddScoped<CallbackActionFactory>();

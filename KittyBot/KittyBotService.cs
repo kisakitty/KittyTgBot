@@ -182,10 +182,11 @@ public class KittyBotService : IHostedService
 
         HandleUserStats(client, update, cancelToken);
 
-        if (message.From != null)
+        if (message.From != null && update.Type == UpdateType.Message && message.Type != MessageType.LeftChatMember &&
+            message.Type != MessageType.NewChatMembers)
         {
             var statsService = scope.ServiceProvider.GetRequiredService<StatsService>();
-            statsService.LogStats(message.From, message.Chat.Id, message.Id);
+            statsService.LogMessage(message.From, message.Chat.Id, message.Id);
         }
 
         var messageText = message.Text ?? message.Caption;
@@ -250,6 +251,11 @@ public class KittyBotService : IHostedService
 
         if (update.Message!.Type == MessageType.LeftChatMember && update.Message.LeftChatMember != null)
             statsService.DeactivateUser(update.Message.LeftChatMember, update.Message.Chat.Id);
+
+        if (update.Message!.Type == MessageType.LeftChatMember && update.Message.LeftChatMember?.Id == _myId)
+        {
+            statsService.DeactivateChat(update.Message.Chat.Id);
+        }
     }
 
     private void ChatAiResponse(ITelegramBotClient client, Update update,

@@ -7,7 +7,7 @@ namespace KittyBot.services;
 
 public class StatsService(KittyBotContext db) : BaseService(db)
 {
-    public void LogStats(User tgUser, long chatId, long messageId)
+    public void LogMessage(User tgUser, long chatId, long messageId)
     {
         CountMessage(tgUser, chatId);
         RememberAuthor(tgUser, chatId, messageId);
@@ -43,6 +43,7 @@ public class StatsService(KittyBotContext db) : BaseService(db)
         else
         {
             stats.CountMessages += 1;
+            stats.IsActive = true;
         }
 
         Db.SaveChanges();
@@ -81,11 +82,31 @@ public class StatsService(KittyBotContext db) : BaseService(db)
     {
         var stats = from s in Db.Stats
             orderby s.CountMessages descending
-            where s.ChatId == chatId
+            where s.ChatId == chatId && s.CountMessages > 0
             select s;
         return stats
             .Include(s => s.User)
             .Select(s => KeyValuePair.Create(Util.FormatUserName(s.User, mention, userIdLink), s.CountMessages))
+            .ToList();
+    }
+
+    public void DeactivateChat(long chatId)
+    {
+        var stats = from s in Db.Stats
+            where s.ChatId == chatId
+            select s;
+        foreach (var s in stats)
+            if (s != null)
+                s.IsActive = false;
+
+        Db.SaveChanges();
+    }
+
+    public List<long> GetAllActiveChats()
+    {
+        return Db.Stats.Where(s => s.IsActive && s.ChatId < 0)
+            .Select(s => s.ChatId)
+            .Distinct()
             .ToList();
     }
 
