@@ -19,8 +19,7 @@ public class BirthdaysNotifier(IServiceScopeFactory scopeFactory, TelegramBotCli
     private const string BirthdayPrompt =
         "Ты бот в небольшом чате, основная твоя задача — поздравлять пользователей с днём рождения. " +
         "Придерживайся неформального и молодёжного стиля, будь максимально оригинальным и непредсказуемым, используй маты и жаргон. " +
-        "Я напишу тебе лишь имя пользователя, его имя и текущий день. Не пиши ничего кроме поздравления. " +
-        "Максимальная длина поздравления: 1000 символов!";
+        "Я напишу тебе лишь имя пользователя, его имя и текущий день. Не пиши ничего кроме поздравления";
 
     private readonly GeminiBot _geminiBot = new();
 
@@ -62,14 +61,15 @@ public class BirthdaysNotifier(IServiceScopeFactory scopeFactory, TelegramBotCli
             }
 
             Log.Information($"Birthday: \n{announce}");
-            Log.Information($"Announced chats: {userChatList}");
+            Log.Information($"Announced chats: {string.Join(", ", userChatList)}");
+            
 
             foreach (var chatId in userChatList)
             {
                 Log.Information($"Announce for chat {chatId}");
                 try
                 {
-                    var chunks = Util.SplitIntoChunks(announce);
+                    var chunks = StringUtils.SplitTextIntoChunks(announce);
                     foreach (var part in chunks)
                     {
                         await client.SendMessage(
@@ -106,7 +106,7 @@ public class BirthdaysNotifier(IServiceScopeFactory scopeFactory, TelegramBotCli
     {
         var localDateString = Util.LocalizeDate(DateTime.Now, "ru-RU");
         var request =
-            $"Пользователь: {Util.FormatUserName(birthday.User, true, false)}. Имя пользователя: {Util.FormatNames(birthday.User, true)}. Дата: {localDateString}";
+            $"Пользователь: {Util.FormatUserName(birthday.User, true, false)}. Имя пользователя: {Util.FormatNames(birthday.User, false)}. Дата: {localDateString}";
         return request;
     }
 

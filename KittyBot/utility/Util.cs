@@ -13,7 +13,6 @@ public static partial class Util
 {
     private const string CommandPattern = @"^/\w+(\s+\w+)*";
     private const string CommandWithArgsPattern = @"^/\w+(\s+\w+)*";
-    public const int MaxChunkSize = 4096;
 
     private static readonly IList<char> SpecialChars =
         new ReadOnlyCollection<char>(new List<char>
@@ -125,23 +124,6 @@ public static partial class Util
         if (text == null) return true;
         text = SpecialChars.Aggregate(text, (current, ch) => current.Replace(ch.ToString(), ""));
         return text.Trim().Length == 0;
-    }
-
-    public static List<string> SplitIntoChunks(string text, int limit = MaxChunkSize)
-    {
-        var chunks = new List<string>();
-        var sb = new StringBuilder();
-        foreach (var line in text.Split("\n"))
-        {
-            if (sb.Length + line.Length + 1 > limit)
-            {
-                chunks.Add(sb.ToString());
-                sb.Length = 0;
-            }
-            sb.Append(line + "\n");
-        }
-        chunks.Add(sb.ToString());
-        return chunks;
     }
 
     [GeneratedRegex(CommandPattern)]
