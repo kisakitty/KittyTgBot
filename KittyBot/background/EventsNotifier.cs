@@ -63,7 +63,7 @@ public class EventsNotifier : BackgroundService
             catch (Exception)
             {
                 resultAnnounce = await _geminiBot.GenerateTextResponse(
-                    _geminiBot.BuildMessage(FormatEventRequest(@event), "user"), "gemini-1.5-flash-001",
+                    _geminiBot.BuildMessage(FormatEventRequest(@event), "user"), "gemini-2.5-flash",
                     cancelToken,
                     EventsPrompt);
             }

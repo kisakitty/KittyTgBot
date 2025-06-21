@@ -55,7 +55,7 @@ public class BirthdaysNotifier(IServiceScopeFactory scopeFactory, TelegramBotCli
             catch (Exception)
             {
                 announce = await _geminiBot.GenerateTextResponse(
-                    _geminiBot.BuildMessage(FormatBirthdayRequest(birthday), "user"), "gemini-1.5-flash-001",
+                    _geminiBot.BuildMessage(FormatBirthdayRequest(birthday), "user"), "gemini-2.5-flash",
                     cancelToken,
                     BirthdayPrompt);
             }

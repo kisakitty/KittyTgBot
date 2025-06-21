@@ -69,7 +69,7 @@ public class HelloHandler(long? botId) : Handler
                     ],
                     "user")
             };
-            return await _geminiBot.GenerateTextResponse(contents, "gemini-1.5-flash-001", cancelToken, NewUserPrompt);
+            return await _geminiBot.GenerateTextResponse(contents, "gemini-2.5-flash", cancelToken, NewUserPrompt);
         }
         catch (GeminiException ex)
         {
@@ -94,7 +94,7 @@ public class HelloHandler(long? botId) : Handler
                     ],
                     "user")
             };
-            return await _geminiBot.GenerateTextResponse(contents, "gemini-1.5-flash-001", cancelToken,
+            return await _geminiBot.GenerateTextResponse(contents, "gemini-2.5-flash", cancelToken,
                 IntroductionPrompt);
         }
         catch (GeminiException ex)

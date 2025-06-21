@@ -45,7 +45,7 @@ public class GeminiHandler(IServiceScopeFactory scopeFactory) : Handler
             var messageContent =
                 await GenerateResponse(update.Message.Chat.Id, formattedMessages, mode, cancelToken);
             LogHistoryMessages(formattedMessages, messageContent, update.Message.Chat.Id, mode);
-            LogAnalytics(chatId, "gemini-1.5-flash-001", "Google API", mode);
+            LogAnalytics(chatId, "gemini-2.5-flash", "Google API", mode);
 
             await client.SendMessage(
                 chatId,
@@ -92,7 +92,7 @@ public class GeminiHandler(IServiceScopeFactory scopeFactory) : Handler
                 }
             ).Where(msg => msg.parts.Count > 0))
             .ToList();
-        return await _geminiBot.GenerateTextResponse(contents, "gemini-1.5-flash-001", cancelToken, PromptMapper.GetGeminiPromptMessage(mode));
+        return await _geminiBot.GenerateTextResponse(contents, "gemini-2.5-flash", cancelToken, PromptMapper.GetGeminiPromptMessage(mode));
     }
 
     private List<GeminiMessage> GetHistory(long chatId, ChatMode mode)
