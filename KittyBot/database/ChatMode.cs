@@ -4,5 +4,5 @@ public enum ChatMode
 {
     NEUTRAL,
     EVIL,
-    PSYCHOLOGY
+    CAT_GIRL
 }

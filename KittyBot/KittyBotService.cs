@@ -232,7 +232,7 @@ public class KittyBotService : IHostedService
     {
         var responseConfigService = scope.ServiceProvider.GetRequiredService<ResponseConfigService>();
         var config = responseConfigService.GetResponseConfig(update.Message.Chat.Id);
-        if (config.ChatBot) ChatAiResponse(client, update, message, cancelToken);
+        if (update.Message.Chat.Id > 0 || config.ChatBot) ChatAiResponse(client, update, message, cancelToken);
     }
 
     private void HandleUserStats(ITelegramBotClient client, Update update, CancellationToken cancelToken)

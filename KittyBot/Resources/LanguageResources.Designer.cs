@@ -99,9 +99,9 @@ namespace KittyBot.Resources {
             }
         }
         
-        internal static string PSYCHOLOGY {
+        internal static string CAT_GIRL {
             get {
-                return ResourceManager.GetString("PSYCHOLOGY", resourceCulture);
+                return ResourceManager.GetString("CAT_GIRL", resourceCulture);
             }
         }
         
